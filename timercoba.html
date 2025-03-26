@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timer dengan Nama dan Penomoran</title>
+  <style>
+    /* Style untuk body dan elemen umum */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh; /* Menggunakan seluruh tinggi layar */
+      box-sizing: border-box;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      background: linear-gradient(135deg, #ff7e5f, #feb47b, #6a11cb, #2575fc); /* Colorful gradient */
+      background-size: 400% 400%;
+      animation: gradientAnimation 10s ease infinite; /* Efek animasi pada gradien */
+    }
+
+    /* Animasi gradien untuk latar belakang */
+    @keyframes gradientAnimation {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    /* Container untuk tabel */
+    .container {
+      width: 100%;
+      max-width: 1000px; /* Batas maksimum lebar */
+      padding: 20px;
+      background-color: white;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    /* Tabel untuk menampilkan data */
+    table {
+      width: 100%; /* Tabel mengisi seluruh lebar container */
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    table, th, td {
+      border: 1px solid #ddd;
+      box-sizing: border-box;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+      word-wrap: break-word; /* Agar teks tidak meluber keluar */
+      vertical-align: middle; /* Vertikal terhadap kolom */
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      box-sizing: border-box; /* Menghitung padding dalam lebar */
+      overflow: hidden; /* Menghindari overflow teks */
+      text-overflow: ellipsis; /* Menambahkan titik-titik jika teks melebihi */
+    }
+
+    .timer {
+      background-color: #333;
+      color: white;
+      padding: 10px 20px;
+      font-size: 1.5em;
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+
+    #startButton, #stopButton {
+      font-size: 1.2em;
+      padding: 10px 20px;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    #startButton:hover {
+      background-color: #45a049;
+    }
+
+    /* Tombol Stop - Warna Merah */
+    #stopButton {
+      background-color: #f44336; /* Warna merah untuk tombol stop */
+    }
+
+    #stopButton:hover {
+      background-color: #e53935; /* Warna merah lebih gelap saat hover */
+    }
+
+    /* Responsif untuk tampilan di layar kecil (mobile) */
+    @media (max-width: 768px) {
+      table {
+        font-size: 14px;
+      }
+
+      th, td {
+        padding: 8px;
+      }
+
+      .timer {
+        font-size: 1.2em;
+        padding: 8px 15px;
+      }
+
+      #startButton, #stopButton {
+        font-size: 1em;
+        padding: 8px 16px;
+      }
+
+      /* Pastikan kolom No dan kolom lainnya responsif */
+      table, th, td {
+        width: 100%;
+      }
+    }
+
+    /* Responsif untuk tampilan di layar lebih kecil dari 500px (paling kecil) */
+    @media (max-width: 500px) {
+      table {
+        font-size: 12px;
+      }
+
+      th, td {
+        padding: 6px;
+      }
+
+      .timer {
+        font-size: 1.1em;
+        padding: 6px 12px;
+      }
+
+      #startButton, #stopButton {
+        font-size: 0.9em;
+        padding: 6px 12px;
+      }
+    }
+
+    /* Menjaga agar layout tetap baik saat mode landscape */
+    @media (orientation: landscape) {
+      body {
+        flex-direction: row; /* Mengubah menjadi baris pada mode landscape */
+        align-items: flex-start; /* Menjaga elemen tetap ke atas */
+        padding-top: 20px; /* Memberikan sedikit padding agar tidak terpotong */
+      }
+
+      .container {
+        width: 80%; /* Mengatur lebar kontainer agar tetap responsif di landscape */
+        max-width: 1000px;
+        height: auto;
+        margin-top: 0; /* Menghilangkan margin untuk lebih fleksibel */
+      }
+
+      table {
+        font-size: 16px;
+      }
+
+      th, td {
+        padding: 10px;
+      }
+
+      #startButton, #stopButton {
+        font-size: 1.2em;
+        padding: 10px 20px;
+      }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <table>
+      <tr>
+        <th>No</th>
+        <th>Nama</th>
+        <th>Timer</th>
+        <th>Mulai</th>
+        <th>Stop</th>
+      </tr>
+      <!-- Baris 1-10 -->
+      <tbody id="timerTableBody">
+        <!-- Baris yang akan diisi secara dinamis oleh JavaScript -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const totalRows = 10; // Jumlah baris
+    const timerData = [];
+
+    // Fungsi untuk membuat baris tabel
+    function createTableRows() {
+      let tableBody = document.getElementById("timerTableBody");
+
+      for (let i = 1; i <= totalRows; i++) {
+        const row = document.createElement("tr");
+
+        // Penomoran
+        const numberCell = document.createElement("td");
+        numberCell.textContent = i;
+        row.appendChild(numberCell);
+
+        // Kolom Nama
+        const nameCell = document.createElement("td");
+        const nameInput = document.createElement("input");
+        nameInput.type = "text";
+        nameInput.placeholder = "Masukkan Nama";
+        nameCell.appendChild(nameInput);
+        row.appendChild(nameCell);
+
+        // Kolom Timer
+        const timerCell = document.createElement("td");
+        const timerDisplay = document.createElement("div");
+        timerDisplay.className = "timer";
+        timerDisplay.textContent = "24:00:00"; // Timer default
+        timerCell.appendChild(timerDisplay);
+        row.appendChild(timerCell);
+
+        // Kolom Tombol Mulai
+        const startCell = document.createElement("td");
+        const startButton = document.createElement("button");
+        startButton.id = `startButton${i}`;
+        startButton.textContent = "Mulai";
+        startButton.addEventListener("click", function() {
+          startTimer(i, timerDisplay, startButton, stopButton);
+        });
+        startCell.appendChild(startButton);
+        row.appendChild(startCell);
+
+        // Kolom Tombol Stop
+        const stopCell = document.createElement("td");
+        const stopButton = document.createElement("button");
+        stopButton.id = `stopButton${i}`;
+        stopButton.textContent = "Stop";
+        stopButton.disabled = true; // Tombol stop dinonaktifkan pada awalnya
+        stopButton.addEventListener("click", function() {
+          stopTimer(i);
+        });
+        stopCell.appendChild(stopButton);
+        row.appendChild(stopCell);
+
+        // Menambahkan baris ke dalam tabel
+        tableBody.appendChild(row);
+
+        // Menyimpan data untuk setiap baris (timer, button, etc.)
+        timerData.push({
+          timerDisplay: timerDisplay,
+          hours: 24,
+          minutes: 0,
+          seconds: 0,
+          timerInterval: null,
+          startButton: startButton,
+          stopButton: stopButton
+        });
+      }
+    }
+
+    // Fungsi untuk memulai timer
+    function startTimer(rowIndex, timerDisplay, startButton, stopButton) {
+      const timer = timerData[rowIndex - 1];
+      timer.timerInterval = setInterval(() => {
+        if (timer.hours === 0 && timer.minutes === 0 && timer.seconds === 0) {
+          clearInterval(timer.timerInterval);
+          alert("Waktu Habis!");
+          stopButton.disabled = true;
+        } else {
+          if (timer.seconds > 0) {
+            timer.seconds--;
+          } else if (timer.minutes > 0) {
+            timer.minutes--;
+            timer.seconds = 59;
+          } else if (timer.hours > 0) {
+            timer.hours--;
+            timer.minutes = 59;
+            timer.seconds = 59;
+          }
+
+          timerDisplay.textContent = `${String(timer.hours).padStart(2, '0')}:${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`;
+        }
+      }, 1000);
+
+      // Menonaktifkan tombol "Mulai" dan mengaktifkan tombol "Stop"
+      startButton.disabled = true;
+      stopButton.disabled = false;
+    }
+
+    // Fungsi untuk menghentikan timer
+    function stopTimer(rowIndex) {
+      const timer = timerData[rowIndex - 1];
+      clearInterval(timer.timerInterval);
+      timer.timerInterval = null;
+      // Mengaktifkan kembali tombol "Mulai" dan menonaktifkan tombol "Stop"
+      timer.startButton.disabled = false;
+      timer.stopButton.disabled = true;
+      alert("Timer dihentikan!");
+    }
+
+    // Memanggil fungsi untuk membuat baris tabel
+    createTableRows();
+  </script>
+
+</body>
+</html>
