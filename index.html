@@ -2,8 +2,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Timer Table</title>
+    <title>Timer Table with Firebase</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <style>
         .btn:active {
             transform: scale(0.95);
@@ -12,15 +15,15 @@
             border: 1px solid #ddd;
             border-collapse: collapse;
         }
-        @keyframes rainbow {
+        @keyframes blue-purple {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
         body {
-            background: linear-gradient(270deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
-            background-size: 1400% 1400%;
-            animation: rainbow 60s ease infinite;
+            background: linear-gradient(270deg, #3b82f6, #6366f1, #8b5cf6, #a855f7);
+            background-size: 400% 400%;
+            animation: blue-purple 15s ease infinite;
         }
         #alarm-box {
             position: fixed;
@@ -32,6 +35,82 @@
             border-radius: 5px;
             cursor: pointer;
             display: none;
+        }
+        .time-separator {
+            display: inline-block;
+            margin: 0 5px;
+            font-weight: bold;
+        }
+        /* Notification styles */
+        #notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: none;
+            max-width: 80%;
+            text-align: center;
+        }
+        #notification h3 {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        #notification p {
+            color: #666;
+        }
+        #notification button {
+            margin-top: 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .notification-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+        /* Converter styles */
+        .converter-container {
+            background: rgba(255,255,255,0.9);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .converter-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .time-input {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            border-radius: 4px;
+            width: 100%;
+            margin: 5px 0;
+        }
+        .converter-btn {
+            margin-top: 2px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            width: 100%;
         }
     </style>
 </head>
@@ -57,14 +136,76 @@
         <div class="mt-4 text-center">
             <button id="add-row-btn" class="bg-blue-500 text-white px-4 py-2 rounded">Tambah Tabel Baru</button>
         </div>
+
+        <!-- WIB to UTC Converter -->
+        <div class="converter-container mt-8">
+            <div class="converter-title">Konverter Waktu WIB ⇄ UTC</div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Waktu WIB</label>
+                    <input type="time" id="wib-time" class="time-input" step="1">
+                    <button id="wib-to-utc" class="converter-btn bg-blue-500 text-white">WIB → UTC</button>
+                </div>
+                <div class="flex items-center justify-center">
+                    <div class="text-2xl font-bold mt-6">⇄</div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Waktu UTC</label>
+                    <input type="time" id="utc-time" class="time-input" step="1">
+                    <button id="utc-to-wib" class="converter-btn bg-green-500 text-white">UTC → WIB</button>
+                </div>
+            </div>
+            <div class="mt-2 text-sm text-gray-500">
+                * WIB (Waktu Indonesia Barat) = UTC+7
+            </div>
+        </div>
     </div>
+    
+    <!-- Notification elements -->
+    <div class="notification-overlay" id="notification-overlay"></div>
+    <div id="notification">
+        <h3>Timer Selesai</h3>
+        <p id="notification-message"></p>
+        <button id="close-notification">OK</button>
+    </div>
+    
     <audio id="alarm-sound" src="./alarm.mp3" preload="auto"></audio>
     <div id="alarm-box">Alarm</div>
+    
     <script>
-        // Hapus fungsi showNotification karena tidak lagi digunakan
-        // function showNotification(name, rowNumber) {
-        //     alert(`Timer pada kolom nama, no ${rowNumber} nama ${name} telah habis`);
-        // }
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDXjv3Yg8RJvxCrYYZvMjpEKSdxcshynTo",
+            authDomain: "pangestu-timer.firebaseapp.com",
+            databaseURL: "https://pangestu-timer-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "pangestu-timer",
+            storageBucket: "pangestu-timer.firebasestorage.app",
+            messagingSenderId: "423055274704",
+            appId: "1:423055274704:web:3e9e438bc18439012364d5",
+            measurementId: "G-0249BJFL8T"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Variabel untuk menyimpan interval timer
+        const activeIntervals = {};
+
+        // Fungsi Firebase Database
+        async function saveTimerToFirebase(timerId, data) {
+            return database.ref('timers/' + timerId).set(data);
+        }
+
+        async function deleteTimerFromFirebase(timerId) {
+            return database.ref('timers/' + timerId).remove();
+        }
+
+        function listenForTimerChanges(callback) {
+            database.ref('timers').on('value', (snapshot) => {
+                callback(snapshot.val() || {});
+            });
+        }
 
         function playAlarm() {
             const alarmSound = document.getElementById('alarm-sound');
@@ -79,6 +220,69 @@
             });
         }
 
+        function showTimerFinishedNotification(rowNumber, timerName) {
+            const overlay = document.getElementById('notification-overlay');
+            const notification = document.getElementById('notification');
+            const message = document.getElementById('notification-message');
+            
+            const displayName = timerName || `Timer ${rowNumber}`;
+            message.textContent = `Timer No. ${rowNumber} (${displayName}) telah selesai!`;
+            
+            overlay.style.display = 'block';
+            notification.style.display = 'block';
+            
+            document.getElementById('close-notification').onclick = function() {
+                overlay.style.display = 'none';
+                notification.style.display = 'none';
+            };
+        }
+
+        function createNewRow(rowNumber, timerData = null) {
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">${rowNumber}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                    <input type="text" placeholder="Masukkan Nama" class="border border-gray-300 rounded px-2 py-1 w-full" 
+                           value="${timerData?.name || ''}">
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                    <input type="text" placeholder="HH:MM:SS" class="border border-gray-300 rounded px-2 py-1 w-full timer-input" 
+                           value="${timerData?.timerInputValue || '24:00:00'}">
+                    <div class="bg-gray-800 text-white text-center rounded px-4 py-2 timer text-lg 
+                              ${timerData?.timerVisible ? '' : 'hidden'}">
+                        ${timerData?.timer || '24:00:00'}
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                    <button class="bg-white border border-gray-300 rounded px-2 py-1 start-btn btn w-full
+                                 ${timerData?.startDisabled ? 'bg-purple-500 text-white' : ''}" 
+                            ${timerData?.startDisabled ? 'disabled' : ''}>
+                        Mulai
+                    </button>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                    <button class="bg-gray-200 border border-gray-300 rounded px-2 py-1 stop-btn btn w-full" 
+                            ${timerData?.stopDisabled ? 'disabled' : ''}>
+                        Stop
+                    </button>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                    <button class="bg-red-500 text-white border border-gray-300 rounded px-2 py-1 delete-btn btn w-full">
+                        Hapus
+                    </button>
+                </td>
+            `;
+            return newRow;
+        }
+
+        function addNewRow() {
+            const tableBody = document.querySelector('#timer-table tbody');
+            const rowCount = tableBody.querySelectorAll('tr').length + 1;
+            const newRow = createNewRow(rowCount);
+            tableBody.appendChild(newRow);
+            addEventListenersToRow(newRow);
+        }
+
         function addEventListenersToRow(row) {
             const startButton = row.querySelector('.start-btn');
             const stopButton = row.querySelector('.stop-btn');
@@ -88,202 +292,254 @@
             const nameInput = row.querySelector('input[type="text"]');
             const rowNumber = row.querySelector('td').textContent;
 
-            let interval;
-
-            startButton.addEventListener('click', () => {
+            function startTimer() {
                 let [hours, minutes, seconds] = timerInput.value.split(':').map(Number);
                 let totalSeconds = hours * 3600 + minutes * 60 + seconds;
+
+                if (isNaN(totalSeconds) || totalSeconds <= 0) {
+                    alert('Masukkan waktu yang valid (HH:MM:SS)');
+                    return;
+                }
 
                 timerElement.textContent = timerInput.value;
                 timerInput.classList.add('hidden');
                 timerElement.classList.remove('hidden');
 
-                interval = setInterval(() => {
+                if (activeIntervals[rowNumber]) {
+                    clearInterval(activeIntervals[rowNumber]);
+                }
+
+                activeIntervals[rowNumber] = setInterval(async () => {
                     if (totalSeconds <= 0) {
-                        clearInterval(interval);
-                        playAlarm(); // Hanya panggil playAlarm()
-                        // showNotification(nameInput.value, rowNumber); // Baris ini sudah dihapus
+                        clearInterval(activeIntervals[rowNumber]);
+                        delete activeIntervals[rowNumber];
+                        playAlarm();
+                        showTimerFinishedNotification(rowNumber, nameInput.value);
+                        
+                        startButton.disabled = false;
+                        startButton.classList.remove('bg-purple-500', 'text-white');
+                        stopButton.disabled = true;
+                        
+                        await saveTimerToFirebase(rowNumber, null); // Hapus timer yang sudah selesai
                         return;
                     }
+                    
                     totalSeconds--;
                     const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
                     const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
                     const s = String(totalSeconds % 60).padStart(2, '0');
                     timerElement.textContent = `${h}:${m}:${s}`;
-                    saveTimerState(rowNumber, totalSeconds);
+                    
+                    // Simpan state ke Firebase
+                    await saveTimerToFirebase(rowNumber, {
+                        name: nameInput.value,
+                        timer: timerElement.textContent,
+                        timerInputValue: timerInput.value,
+                        startDisabled: true,
+                        stopDisabled: false,
+                        timerVisible: true,
+                        totalSeconds: totalSeconds,
+                        isRunning: true,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    });
                 }, 1000);
 
                 startButton.disabled = true;
-                startButton.classList.add('bg-green-500', 'text-white');
+                startButton.classList.add('bg-purple-500', 'text-white');
                 stopButton.disabled = false;
+            }
 
-                stopButton.addEventListener('click', () => {
-                    clearInterval(interval);
-                    startButton.disabled = false;
-                    startButton.classList.remove('bg-green-500', 'text-white');
-                    stopButton.disabled = true;
-                    saveTimerState(rowNumber, totalSeconds);
+            startButton.addEventListener('click', startTimer);
+
+            stopButton.addEventListener('click', async () => {
+                if (activeIntervals[rowNumber]) {
+                    clearInterval(activeIntervals[rowNumber]);
+                    delete activeIntervals[rowNumber];
+                }
+                
+                startButton.disabled = false;
+                startButton.classList.remove('bg-purple-500', 'text-white');
+                stopButton.disabled = true;
+
+                const currentTime = timerElement.textContent.split(':');
+                const totalSeconds = parseInt(currentTime[0]) * 3600 + 
+                                   parseInt(currentTime[1]) * 60 + 
+                                   parseInt(currentTime[2]);
+                
+                await saveTimerToFirebase(rowNumber, {
+                    name: nameInput.value,
+                    timer: timerElement.textContent,
+                    timerInputValue: timerInput.value,
+                    startDisabled: false,
+                    stopDisabled: true,
+                    timerVisible: true,
+                    totalSeconds: totalSeconds,
+                    isRunning: false,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
                 });
             });
 
-            deleteButton.addEventListener('click', () => {
+            deleteButton.addEventListener('click', async () => {
+                if (activeIntervals[rowNumber]) {
+                    clearInterval(activeIntervals[rowNumber]);
+                    delete activeIntervals[rowNumber];
+                }
+                
+                await deleteTimerFromFirebase(rowNumber);
                 row.remove();
                 updateRowNumbers();
-                saveTableState();
             });
 
-            nameInput.addEventListener('input', saveTableState);
-            timerElement.addEventListener('DOMSubtreeModified', saveTableState);
+            nameInput.addEventListener('input', async () => {
+                await saveTimerToFirebase(rowNumber, {
+                    name: nameInput.value,
+                    timer: timerElement.textContent,
+                    timerInputValue: timerInput.value,
+                    startDisabled: startButton.disabled,
+                    stopDisabled: stopButton.disabled,
+                    timerVisible: !timerElement.classList.contains('hidden')
+                });
+            });
         }
 
         function updateRowNumbers() {
             document.querySelectorAll('#timer-table tbody tr').forEach((row, index) => {
-                row.querySelector('td').textContent = index + 1;
+                const newRowNumber = index + 1;
+                row.querySelector('td').textContent = newRowNumber;
+                
+                if (activeIntervals[row.querySelector('td').textContent]) {
+                    activeIntervals[newRowNumber] = activeIntervals[row.querySelector('td').textContent];
+                    delete activeIntervals[row.querySelector('td').textContent];
+                }
             });
-        }
-
-        function saveTableState() {
-            const rows = document.querySelectorAll('#timer-table tbody tr');
-            const tableData = Array.from(rows).map(row => {
-                return {
-                    no: row.querySelector('td').textContent,
-                    name: row.querySelector('input[type="text"]').value,
-                    timer: row.querySelector('.timer').textContent,
-                    startDisabled: row.querySelector('.start-btn').disabled,
-                    stopDisabled: row.querySelector('.stop-btn').disabled
-                };
-            });
-            localStorage.setItem('tableData', JSON.stringify(tableData));
-        }
-
-        function saveTimerState(rowNumber, totalSeconds) {
-            const timerData = JSON.parse(localStorage.getItem('timerData')) || {};
-            timerData[rowNumber] = totalSeconds;
-            localStorage.setItem('timerData', JSON.stringify(timerData));
-        }
-
-        function loadTableState() {
-            const tableData = JSON.parse(localStorage.getItem('tableData'));
-            if (tableData) {
-                tableData.forEach(data => {
-                    const newRow = document.createElement('tr');
-                    newRow.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">${data.no}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <input type="text" placeholder="Masukkan Nama" class="border border-gray-300 rounded px-2 py-1 w-full" value="${data.name}">
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <input type="text" placeholder="HH:MM:SS" class="border border-gray-300 rounded px-2 py-1 w-full timer-input" value="${data.timer}">
-                            <div class="bg-gray-800 text-white text-center rounded px-4 py-2 timer text-lg hidden">${data.timer}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <button class="bg-white border border-gray-300 rounded px-2 py-1 start-btn btn w-full" ${data.startDisabled ? 'disabled' : ''}>Mulai</button>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <button class="bg-gray-200 border border-gray-300 rounded px-2 py-1 stop-btn btn w-full" ${data.stopDisabled ? 'disabled' : ''}>Stop</button>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <button class="bg-red-500 text-white border border-gray-300 rounded px-2 py-1 delete-btn btn w-full">Hapus</button>
-                        </td>
-                    `;
-                    document.querySelector('#timer-table tbody').appendChild(newRow);
-                    addEventListenersToRow(newRow);
-                });
-            }
-        }
-
-        function loadTimerState() {
-            const timerData = JSON.parse(localStorage.getItem('timerData'));
-            if (timerData) {
-                Object.keys(timerData).forEach(rowNumber => {
-                    const row = document.querySelector(`#timer-table tbody tr:nth-child(${rowNumber})`);
-                    if (row) {
-                        const timerElement = row.querySelector('.timer');
-                        let totalSeconds = timerData[rowNumber];
-                        const interval = setInterval(() => {
-                            if (totalSeconds <= 0) {
-                                clearInterval(interval);
-                                return;
-                            }
-                            totalSeconds--;
-                            const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-                            const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-                            const s = String(totalSeconds % 60).padStart(2, '0');
-                            timerElement.textContent = `${h}:${m}:${s}`;
-                            saveTimerState(rowNumber, totalSeconds);
-                        }, 1000);
-
-                        const startButton = row.querySelector('.start-btn');
-                        const stopButton = row.querySelector('.stop-btn');
-
-                        startButton.disabled = true;
-                        startButton.classList.add('bg-green-500', 'text-white');
-                        stopButton.disabled = false;
-
-                        stopButton.addEventListener('click', () => {
-                            clearInterval(interval);
-                            startButton.disabled = false;
-                            startButton.classList.remove('bg-green-500', 'text-white');
-                            stopButton.disabled = true;
-                            saveTimerState(rowNumber, totalSeconds);
-                        });
-                    }
-                });
-            }
         }
 
         function updateDateTime() {
             const now = new Date();
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' };
-            const formattedDateTime = now.toLocaleDateString('id-ID', options);
-            document.getElementById('date-time').textContent = formattedDateTime;
+            
+            const optionsWIB = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit', 
+                timeZone: 'Asia/Jakarta',
+                timeZoneName: 'short'
+            };
+            const formattedWIB = now.toLocaleDateString('id-ID', optionsWIB);
+            
+            const optionsUTC = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit', 
+                timeZone: 'UTC',
+                timeZoneName: 'short'
+            };
+            const formattedUTC = now.toLocaleDateString('id-ID', optionsUTC);
+            
+            document.getElementById('date-time').innerHTML = `
+                ${formattedWIB} 
+                <span class="time-separator">|</span> 
+                ${formattedUTC}
+            `;
         }
 
-        document.getElementById('add-row-btn').addEventListener('click', () => {
-            const tableBody = document.querySelector('#timer-table tbody');
-            const rowCount = tableBody.rows.length + 1;
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">${rowCount}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <input type="text" placeholder="Masukkan Nama" class="border border-gray-300 rounded px-2 py-1 w-full">
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <input type="text" placeholder="HH:MM:SS" class="border border-gray-300 rounded px-2 py-1 w-full timer-input" value="24:00:00">
-                    <div class="bg-gray-800 text-white text-center rounded px-4 py-2 timer text-lg hidden">24:00:00</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <button class="bg-white border border-gray-300 rounded px-2 py-1 start-btn btn w-full">Mulai</button>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <button class="bg-gray-200 border border-gray-300 rounded px-2 py-1 stop-btn btn w-full" disabled>Stop</button>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <button class="bg-red-500 text-white border border-gray-300 rounded px-2 py-1 delete-btn btn w-full">Hapus</button>
-                </td>
-            `;
-            tableBody.appendChild(newRow);
-            addEventListenersToRow(newRow);
-            saveTableState();
-        });
+        function convertWIBtoUTC() {
+            const wibTimeInput = document.getElementById('wib-time');
+            const utcTimeInput = document.getElementById('utc-time');
+            
+            if (!wibTimeInput.value) return;
+            
+            const [hours, minutes, seconds] = wibTimeInput.value.split(':').map(Number);
+            let utcHours = hours - 7;
+            if (utcHours < 0) utcHours += 24;
+            
+            utcTimeInput.value = `${String(utcHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
 
-        window.addEventListener('beforeunload', saveTableState);
-        window.addEventListener('load', () => {
-            loadTableState();
-            loadTimerState();
+        function convertUTCtoWIB() {
+            const wibTimeInput = document.getElementById('wib-time');
+            const utcTimeInput = document.getElementById('utc-time');
+            
+            if (!utcTimeInput.value) return;
+            
+            const [hours, minutes, seconds] = utcTimeInput.value.split(':').map(Number);
+            let wibHours = hours + 7;
+            if (wibHours >= 24) wibHours -= 24;
+            
+            wibTimeInput.value = `${String(wibHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Setup Firebase listener
+            listenForTimerChanges((timers) => {
+                const tableBody = document.querySelector('#timer-table tbody');
+                tableBody.innerHTML = '';
+                
+                if (timers) {
+                    Object.entries(timers).forEach(([rowNumber, timerData]) => {
+                        const newRow = createNewRow(rowNumber, timerData);
+                        tableBody.appendChild(newRow);
+                        addEventListenersToRow(newRow);
+                        
+                        // Handle running timers
+                        if (timerData.isRunning && timerData.totalSeconds > 0) {
+                            const timerElement = newRow.querySelector('.timer');
+                            const startButton = newRow.querySelector('.start-btn');
+                            const stopButton = newRow.querySelector('.stop-btn');
+                            
+                            startButton.disabled = true;
+                            startButton.classList.add('bg-purple-500', 'text-white');
+                            stopButton.disabled = false;
+                            
+                            // Hitung waktu yang berlalu sejak terakhir disimpan
+                            const timeElapsed = Math.floor((Date.now() - timerData.timestamp) / 1000);
+                            let totalSeconds = Math.max(0, timerData.totalSeconds - timeElapsed);
+                            
+                            const updateTimer = () => {
+                                if (totalSeconds <= 0) {
+                                    clearInterval(activeIntervals[rowNumber]);
+                                    delete activeIntervals[rowNumber];
+                                    playAlarm();
+                                    showTimerFinishedNotification(rowNumber, timerData.name);
+                                    saveTimerToFirebase(rowNumber, null);
+                                    return;
+                                }
+                                
+                                totalSeconds--;
+                                const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+                                const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+                                const s = String(totalSeconds % 60).padStart(2, '0');
+                                timerElement.textContent = `${h}:${m}:${s}`;
+                            };
+                            
+                            updateTimer();
+                            activeIntervals[rowNumber] = setInterval(updateTimer, 1000);
+                        }
+                    });
+                }
+            });
+
+            document.getElementById('add-row-btn').addEventListener('click', addNewRow);
+            document.getElementById('wib-to-utc').addEventListener('click', convertWIBtoUTC);
+            document.getElementById('utc-to-wib').addEventListener('click', convertUTCtoWIB);
+            document.getElementById('wib-time').addEventListener('input', convertWIBtoUTC);
+            document.getElementById('utc-time').addEventListener('input', convertUTCtoWIB);
+            
+            const now = new Date();
+            const wibTimeInput = document.getElementById('wib-time');
+            wibTimeInput.value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            convertWIBtoUTC();
+            
             updateDateTime();
             setInterval(updateDateTime, 1000);
-        });
-
-        document.addEventListener('click', function(event) {
-            if (event.target.classList.contains('start-btn')) {
-                const row = event.target.closest('tr');
-                const timerInput = row.querySelector('.timer-input');
-                const timerElement = row.querySelector('.timer');
-                timerElement.textContent = timerInput.value;
-                timerInput.classList.add('hidden');
-                timerElement.classList.remove('hidden');
-            }
         });
     </script>
 </body>
