@@ -291,7 +291,8 @@
                 timerInputValue: '24:00:00',
                 startDisabled: false,
                 stopDisabled: true,
-                timerVisible: false
+                timerVisible: false,
+                isRunning: false
             });
         }
 
@@ -332,7 +333,17 @@
                         startButton.classList.remove('bg-purple-500', 'text-white');
                         stopButton.disabled = true;
                         
-                        await saveTimerToFirebase(rowNumber, null);
+                        // Jangan hapus data dari Firebase, cukup update status
+                        await saveTimerToFirebase(rowNumber, {
+                            name: nameInput.value,
+                            timer: '00:00:00',
+                            timerInputValue: timerInput.value,
+                            startDisabled: false,
+                            stopDisabled: true,
+                            timerVisible: true,
+                            isRunning: false,
+                            totalSeconds: 0
+                        });
                         return;
                     }
                     
@@ -422,7 +433,8 @@
                     timerInputValue: timerInput.value,
                     startDisabled: startButton.disabled,
                     stopDisabled: stopButton.disabled,
-                    timerVisible: !timerDisplay.classList.contains('hidden')
+                    timerVisible: !timerDisplay.classList.contains('hidden'),
+                    isRunning: startButton.disabled
                 });
             });
         }
@@ -430,11 +442,12 @@
         function updateRowNumbers() {
             document.querySelectorAll('#timer-table tbody tr').forEach((row, index) => {
                 const newRowNumber = index + 1;
+                const oldRowNumber = row.querySelector('td').textContent;
                 row.querySelector('td').textContent = newRowNumber;
                 
-                if (activeIntervals[row.querySelector('td').textContent]) {
-                    activeIntervals[newRowNumber] = activeIntervals[row.querySelector('td').textContent];
-                    delete activeIntervals[row.querySelector('td').textContent];
+                if (activeIntervals[oldRowNumber]) {
+                    activeIntervals[newRowNumber] = activeIntervals[oldRowNumber];
+                    delete activeIntervals[oldRowNumber];
                 }
             });
         }
@@ -534,7 +547,18 @@
                                     delete activeIntervals[rowNumber];
                                     playAlarm();
                                     showTimerFinishedNotification(rowNumber, timerData.name);
-                                    saveTimerToFirebase(rowNumber, null);
+                                    
+                                    // Update status tanpa menghapus data
+                                    saveTimerToFirebase(rowNumber, {
+                                        name: timerData.name,
+                                        timer: '00:00:00',
+                                        timerInputValue: timerData.timerInputValue,
+                                        startDisabled: false,
+                                        stopDisabled: true,
+                                        timerVisible: true,
+                                        isRunning: false,
+                                        totalSeconds: 0
+                                    });
                                     return;
                                 }
                                 
