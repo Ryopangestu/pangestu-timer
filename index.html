@@ -226,6 +226,7 @@
             const overlay = document.getElementById('notification-overlay');
             const notification = document.getElementById('notification');
             const message = document.getElementById('notification-message');
+            const closeButton = document.getElementById('close-notification');
             
             const displayName = timerName || `Timer ${rowNumber}`;
             message.textContent = `Timer No. ${rowNumber} (${displayName}) telah selesai!`;
@@ -233,12 +234,28 @@
             overlay.style.display = 'block';
             notification.style.display = 'block';
             
-            document.getElementById('close-notification').onclick = function() {
+            // Hapus event listener sebelumnya jika ada
+            closeButton.onclick = null;
+            
+            // Tambahkan event listener baru
+            closeButton.addEventListener('click', function handleClose() {
                 overlay.style.display = 'none';
                 notification.style.display = 'none';
-            };
+                
+                // Hentikan alarm jika masih berbunyi
+                const alarmSound = document.getElementById('alarm-sound');
+                alarmSound.pause();
+                alarmSound.currentTime = 0;
+                
+                const alarmBox = document.getElementById('alarm-box');
+                alarmBox.style.display = 'none';
+                
+                // Hapus event listener setelah digunakan
+                closeButton.removeEventListener('click', handleClose);
+            });
         }
 
+        // [Fungsi-fungsi lainnya tetap sama seperti sebelumnya]
         function createNewRow(rowNumber, timerData = null) {
             const newRow = document.createElement('tr');
             newRow.innerHTML = `
