@@ -4,36 +4,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timer Table</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Tambahkan Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-database.js";
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyAEvZsHU6gBfycu-uEt2sb42xzRvgR7_Ww",
-            authDomain: "namas-timer.firebaseapp.com",
-            projectId: "namas-timer",
-            storageBucket: "namas-timer.appspot.com",
-            messagingSenderId: "663877981459",
-            appId: "1:663877981459:web:08bdcb0664652a82eaf6e6",
-            measurementId: "G-Q6H1HTKHC6"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
-        
-        // Ekspor fungsi-fungsi Firebase yang diperlukan
-        window.firebase = {
-            db: database,
-            ref,
-            set,
-            onValue,
-            push,
-            remove,
-            update
-        };
-    </script>
     <style>
         .btn:active {
             transform: scale(0.95);
@@ -90,10 +60,48 @@
     </div>
     <audio id="alarm-sound" src="./alarm.mp3" preload="auto"></audio>
     <div id="alarm-box">Alarm</div>
-    <script>
-        // Variabel global untuk menyimpan interval timer
-        const activeTimers = {};
 
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-database.js";
+        
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAEvZsHU6gBfycu-uEt2sb42xzRvgR7_Ww",
+            authDomain: "namas-timer.firebaseapp.com",
+            projectId: "namas-timer",
+            storageBucket: "namas-timer.appspot.com",
+            messagingSenderId: "663877981459",
+            appId: "1:663877981459:web:08bdcb0664652a82eaf6e6",
+            measurementId: "G-Q6H1HTKHC6"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // Global variables
+        const activeTimers = {};
+        let isFirebaseReady = false;
+
+        // Set Firebase functions to window after initialization
+        window.firebase = {
+            db: database,
+            ref,
+            set,
+            onValue,
+            push,
+            remove,
+            update,
+            ready: () => isFirebaseReady = true
+        };
+
+        // Mark Firebase as ready
+        window.firebase.ready();
+
+        // Alarm function
         function playAlarm() {
             const alarmSound = document.getElementById('alarm-sound');
             const alarmBox = document.getElementById('alarm-box');
@@ -107,6 +115,7 @@
             });
         }
 
+        // Add event listeners to each row
         function addEventListenersToRow(row, rowId) {
             const startButton = row.querySelector('.start-btn');
             const stopButton = row.querySelector('.stop-btn');
@@ -123,17 +132,17 @@
                 timerInput.classList.add('hidden');
                 timerElement.classList.remove('hidden');
 
-                // Hentikan timer sebelumnya jika ada
+                // Clear existing timer if any
                 if (activeTimers[rowId]) {
                     clearInterval(activeTimers[rowId]);
                 }
 
-                // Mulai timer baru
+                // Start new timer
                 activeTimers[rowId] = setInterval(() => {
                     if (totalSeconds <= 0) {
                         clearInterval(activeTimers[rowId]);
+                        delete activeTimers[rowId];
                         playAlarm();
-                        // Update status di Firebase
                         updateTimerInFirebase(rowId, {
                             timer: timerElement.textContent,
                             startDisabled: false,
@@ -148,7 +157,6 @@
                     const s = String(totalSeconds % 60).padStart(2, '0');
                     timerElement.textContent = `${h}:${m}:${s}`;
                     
-                    // Update timer di Firebase setiap detik
                     updateTimerInFirebase(rowId, {
                         timer: timerElement.textContent,
                         remainingSeconds: totalSeconds
@@ -159,7 +167,6 @@
                 startButton.classList.add('bg-green-500', 'text-white');
                 stopButton.disabled = false;
 
-                // Update status di Firebase
                 updateTimerInFirebase(rowId, {
                     startDisabled: true,
                     stopDisabled: false,
@@ -177,7 +184,6 @@
                 startButton.classList.remove('bg-green-500', 'text-white');
                 stopButton.disabled = true;
 
-                // Update status di Firebase
                 updateTimerInFirebase(rowId, {
                     startDisabled: false,
                     stopDisabled: true,
@@ -206,32 +212,36 @@
         function updateRowNumbers() {
             document.querySelectorAll('#timer-table tbody tr').forEach((row, index) => {
                 row.querySelector('td').textContent = index + 1;
+                // Update the number in Firebase as well
+                updateTimerInFirebase(row.getAttribute('data-id'), {
+                    no: index + 1
+                });
             });
         }
 
-        // Fungsi Firebase
+        // Firebase functions
         function addTimerToFirebase(timerData) {
-            const newTimerRef = firebase.push(firebase.ref(firebase.db, 'timers'));
-            firebase.set(newTimerRef, timerData);
-            return newTimerRef.key; // Mengembalikan ID unik
+            const newTimerRef = push(ref(database, 'timers'));
+            set(newTimerRef, timerData);
+            return newTimerRef.key;
         }
 
         function updateTimerInFirebase(timerId, updates) {
-            const timerRef = firebase.ref(firebase.db, `timers/${timerId}`);
-            firebase.update(timerRef, updates);
+            const timerRef = ref(database, `timers/${timerId}`);
+            update(timerRef, updates);
         }
 
         function deleteTimerFromFirebase(timerId) {
-            const timerRef = firebase.ref(firebase.db, `timers/${timerId}`);
-            firebase.remove(timerRef);
+            const timerRef = ref(database, `timers/${timerId}`);
+            remove(timerRef);
         }
 
         function loadTimersFromFirebase() {
-            const timersRef = firebase.ref(firebase.db, 'timers');
-            firebase.onValue(timersRef, (snapshot) => {
+            const timersRef = ref(database, 'timers');
+            onValue(timersRef, (snapshot) => {
                 const timers = snapshot.val();
                 const tableBody = document.querySelector('#timer-table tbody');
-                tableBody.innerHTML = ''; // Kosongkan tabel
+                tableBody.innerHTML = '';
                 
                 if (timers) {
                     Object.keys(timers).forEach((timerId) => {
@@ -262,7 +272,6 @@
                         tableBody.appendChild(newRow);
                         addEventListenersToRow(newRow, timerId);
                         
-                        // Jika timer sedang berjalan, mulai ulang countdown
                         if (timer.isRunning && timer.remainingSeconds) {
                             const timerElement = newRow.querySelector('.timer');
                             const startButton = newRow.querySelector('.start-btn');
@@ -277,12 +286,10 @@
                             
                             let totalSeconds = timer.remainingSeconds;
                             
-                            // Hentikan timer sebelumnya jika ada
                             if (activeTimers[timerId]) {
                                 clearInterval(activeTimers[timerId]);
                             }
                             
-                            // Mulai timer baru
                             activeTimers[timerId] = setInterval(() => {
                                 if (totalSeconds <= 0) {
                                     clearInterval(activeTimers[timerId]);
@@ -320,7 +327,8 @@
             document.getElementById('date-time').textContent = formattedDateTime;
         }
 
-        document.getElementById('add-row-btn').addEventListener('click', () => {
+        // Add new timer function
+        function handleAddNewTimer() {
             const tableBody = document.querySelector('#timer-table tbody');
             const rowCount = tableBody.rows.length + 1;
             
@@ -334,21 +342,26 @@
                 isRunning: false
             };
             
-            const timerId = addTimerToFirebase(newTimerData);
-        });
+            addTimerToFirebase(newTimerData);
+        }
 
-        document.addEventListener('click', function(event) {
-            if (event.target.classList.contains('start-btn')) {
-                const row = event.target.closest('tr');
-                const timerInput = row.querySelector('.timer-input');
-                const timerElement = row.querySelector('.timer');
-                timerElement.textContent = timerInput.value;
-                timerInput.classList.add('hidden');
-                timerElement.classList.remove('hidden');
-            }
-        });
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set up event listeners
+            document.getElementById('add-row-btn').addEventListener('click', handleAddNewTimer);
+            
+            document.addEventListener('click', function(event) {
+                if (event.target.classList.contains('start-btn')) {
+                    const row = event.target.closest('tr');
+                    const timerInput = row.querySelector('.timer-input');
+                    const timerElement = row.querySelector('.timer');
+                    timerElement.textContent = timerInput.value;
+                    timerInput.classList.add('hidden');
+                    timerElement.classList.remove('hidden');
+                }
+            });
 
-        window.addEventListener('load', () => {
+            // Load data and start clock
             loadTimersFromFirebase();
             updateDateTime();
             setInterval(updateDateTime, 1000);
