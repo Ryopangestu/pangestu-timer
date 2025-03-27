@@ -42,48 +42,6 @@
             margin: 0 5px;
             font-weight: bold;
         }
-        /* Notification styles */
-        #notification {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            z-index: 1000;
-            display: none;
-            max-width: 80%;
-            text-align: center;
-        }
-        #notification h3 {
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #333;
-        }
-        #notification p {
-            color: #666;
-        }
-        #notification button {
-            margin-top: 15px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .notification-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 999;
-            display: none;
-        }
         /* Converter styles */
         .converter-container {
             background: rgba(255,255,255,0.9);
@@ -163,14 +121,6 @@
         </div>
     </div>
     
-    <!-- Notification elements -->
-    <div class="notification-overlay" id="notification-overlay"></div>
-    <div id="notification">
-        <h3>Timer Selesai</h3>
-        <p id="notification-message"></p>
-        <button id="close-notification">OK</button>
-    </div>
-    
     <audio id="alarm-sound" src="./alarm.mp3" preload="auto"></audio>
     <div id="alarm-box">Alarm</div>
     
@@ -222,40 +172,6 @@
             });
         }
 
-        function showTimerFinishedNotification(rowNumber, timerName) {
-            const overlay = document.getElementById('notification-overlay');
-            const notification = document.getElementById('notification');
-            const message = document.getElementById('notification-message');
-            const closeButton = document.getElementById('close-notification');
-            
-            const displayName = timerName || `Timer ${rowNumber}`;
-            message.textContent = `Timer No. ${rowNumber} (${displayName}) telah selesai!`;
-            
-            overlay.style.display = 'block';
-            notification.style.display = 'block';
-            
-            // Hapus event listener sebelumnya jika ada
-            closeButton.onclick = null;
-            
-            // Tambahkan event listener baru
-            closeButton.addEventListener('click', function handleClose() {
-                overlay.style.display = 'none';
-                notification.style.display = 'none';
-                
-                // Hentikan alarm jika masih berbunyi
-                const alarmSound = document.getElementById('alarm-sound');
-                alarmSound.pause();
-                alarmSound.currentTime = 0;
-                
-                const alarmBox = document.getElementById('alarm-box');
-                alarmBox.style.display = 'none';
-                
-                // Hapus event listener setelah digunakan
-                closeButton.removeEventListener('click', handleClose);
-            });
-        }
-
-        // [Fungsi-fungsi lainnya tetap sama seperti sebelumnya]
         function createNewRow(rowNumber, timerData = null) {
             const newRow = document.createElement('tr');
             newRow.innerHTML = `
@@ -344,7 +260,6 @@
                         clearInterval(activeIntervals[rowNumber]);
                         delete activeIntervals[rowNumber];
                         playAlarm();
-                        showTimerFinishedNotification(rowNumber, nameInput.value);
                         
                         startButton.disabled = false;
                         startButton.classList.remove('bg-purple-500', 'text-white');
@@ -563,7 +478,6 @@
                                     clearInterval(activeIntervals[rowNumber]);
                                     delete activeIntervals[rowNumber];
                                     playAlarm();
-                                    showTimerFinishedNotification(rowNumber, timerData.name);
                                     
                                     // Update status tanpa menghapus data
                                     saveTimerToFirebase(rowNumber, {
