@@ -61,7 +61,10 @@
     <audio id="alarm-sound" src="./alarm.mp3" preload="auto"></audio>
     <div id="alarm-box">Alarm</div>
     <script>
-        }
+        // Hapus fungsi showNotification karena tidak lagi digunakan
+        // function showNotification(name, rowNumber) {
+        //     alert(`Timer pada kolom nama, no ${rowNumber} nama ${name} telah habis`);
+        // }
 
         function playAlarm() {
             const alarmSound = document.getElementById('alarm-sound');
@@ -98,8 +101,8 @@
                 interval = setInterval(() => {
                     if (totalSeconds <= 0) {
                         clearInterval(interval);
-                        playAlarm(); // Panggil playAlarm() terlebih dahulu
-                        showNotification(nameInput.value, rowNumber); // Kemudian panggil showNotification()
+                        playAlarm(); // Hanya panggil playAlarm()
+                        // showNotification(nameInput.value, rowNumber); // Baris ini sudah dihapus
                         return;
                     }
                     totalSeconds--;
