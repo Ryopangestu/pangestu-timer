@@ -4,6 +4,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timer Table</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tambahkan Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-database.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyAEvZsHU6gBfycu-uEt2sb42xzRvgR7_Ww",
+            authDomain: "namas-timer.firebaseapp.com",
+            projectId: "namas-timer",
+            storageBucket: "namas-timer.appspot.com",
+            messagingSenderId: "663877981459",
+            appId: "1:663877981459:web:08bdcb0664652a82eaf6e6",
+            measurementId: "G-Q6H1HTKHC6"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        
+        // Ekspor fungsi-fungsi Firebase yang diperlukan
+        window.firebase = {
+            db: database,
+            ref,
+            set,
+            onValue,
+            push,
+            remove,
+            update
+        };
+    </script>
     <style>
         .btn:active {
             transform: scale(0.95);
@@ -33,50 +63,7 @@
             cursor: pointer;
             display: none;
         }
-        #notification-box {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #f0ad4e;
-            color: white;
-            padding: 20px;
-            border-radius: 5px;
-            border: 1px solid #eea236;
-            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-            z-index: 1000;
-            display: none;
-        }
-        #notification-text {
-            margin-bottom: 10px;
-        }
     </style>
-    <script type="module">
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-app-compat.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-analytics-compat.js";
-        import { getDatabase } from "https://www.gstatic.com/firebasejs/11.5.0/firebase-database-compat.js";
-        // TODO: Add SDKs for Firebase products that you want to use
-        // https://firebase.google.com/docs/web/setup#available-libraries
-
-        // Your web app's Firebase configuration
-        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-        const firebaseConfig = {
-            apiKey: "AIzaSyAEvZsHU6gBfycu-uEt2sb42xzRvgR7_Ww",
-            authDomain: "namas-timer.firebaseapp.com",
-            projectId: "namas-timer",
-            storageBucket: "namas-timer.firebasestorage.app",
-            messagingSenderId: "663877981459",
-            appId: "1:663877981459:web:08bdcb0664652a82eaf6e6",
-            measurementId: "G-Q6H1HTKHC6"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const database = getDatabase(app); // Dapatkan instance database
-        const timersRef = firebase.database().ref('timers'); // Referensi ke node 'timers'
-    </script>
 </head>
 <body class="flex items-center justify-center min-h-screen">
     <div class="bg-white rounded-lg shadow-lg p-4 overflow-x-auto w-full max-w-7xl">
@@ -103,14 +90,10 @@
     </div>
     <audio id="alarm-sound" src="./alarm.mp3" preload="auto"></audio>
     <div id="alarm-box">Alarm</div>
-
-    <div id="notification-box" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #f0ad4e; color: white; padding: 20px; border-radius: 5px; border: 1px solid #eea236; box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2); z-index: 1000; display: none;">
-        <p id="notification-text" style="margin-bottom: 10px;"></p>
-        <button onclick="hideNotification()" style="background-color: #d9534f; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer;">Tutup</button>
-    </div>
-
     <script>
-        // Fungsi untuk memainkan suara alarm
+        // Variabel global untuk menyimpan interval timer
+        const activeTimers = {};
+
         function playAlarm() {
             const alarmSound = document.getElementById('alarm-sound');
             const alarmBox = document.getElementById('alarm-box');
@@ -124,31 +107,13 @@
             });
         }
 
-        // Fungsi untuk menampilkan notifikasi
-        function showNotification(message) {
-            const notificationBox = document.getElementById('notification-box');
-            const notificationText = document.getElementById('notification-text');
-            notificationText.textContent = message;
-            notificationBox.style.display = 'block';
-        }
-
-        // Fungsi untuk menyembunyikan notifikasi
-        function hideNotification() {
-            const notificationBox = document.getElementById('notification-box');
-            notificationBox.style.display = 'none';
-        }
-
-        // Fungsi untuk menambahkan event listener ke setiap baris timer
-        function addEventListenersToRow(row) {
+        function addEventListenersToRow(row, rowId) {
             const startButton = row.querySelector('.start-btn');
             const stopButton = row.querySelector('.stop-btn');
             const deleteButton = row.querySelector('.delete-btn');
             const timerElement = row.querySelector('.timer');
             const timerInput = row.querySelector('.timer-input');
             const nameInput = row.querySelector('input[type="text"]');
-            const rowNumber = row.querySelector('td').textContent;
-            let timerId; // Untuk menyimpan ID Firebase dari timer ini
-            let interval;
 
             startButton.addEventListener('click', () => {
                 let [hours, minutes, seconds] = timerInput.value.split(':').map(Number);
@@ -158,302 +123,236 @@
                 timerInput.classList.add('hidden');
                 timerElement.classList.remove('hidden');
 
-                const timerData = {
-                    name: nameInput.value,
-                    duration: timerInput.value,
-                    remaining: totalSeconds,
-                    isRunning: true // Tambahkan status isRunning
-                };
+                // Hentikan timer sebelumnya jika ada
+                if (activeTimers[rowId]) {
+                    clearInterval(activeTimers[rowId]);
+                }
 
-                // Simpan data timer ke Firebase dan dapatkan ID-nya
-                const newTimerRef = timersRef.push(timerData);
-                timerId = newTimerRef.key; // Simpan ID Firebase
-
-                interval = setInterval(() => {
+                // Mulai timer baru
+                activeTimers[rowId] = setInterval(() => {
                     if (totalSeconds <= 0) {
-                        clearInterval(interval);
+                        clearInterval(activeTimers[rowId]);
                         playAlarm();
-                        showNotification(`Timer untuk "${nameInput.value}" telah habis!`);
-                        // Perbarui status di Firebase menjadi selesai
-                        if (timerId) {
-                            timersRef.child(timerId).update({ isRunning: false, remaining: 0 });
-                        }
+                        // Update status di Firebase
+                        updateTimerInFirebase(rowId, {
+                            timer: timerElement.textContent,
+                            startDisabled: false,
+                            stopDisabled: true,
+                            isRunning: false
+                        });
                         return;
                     }
                     totalSeconds--;
                     const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
                     const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
                     const s = String(totalSeconds % 60).padStart(2, '0');
-                    timerElement.textContent = `<span class="math-inline">\{h\}\:</span>{m}:${s}`;
-                    // Perbarui nilai di Firebase
-                    if (timerId) {
-                        timersRef.child(timerId).update({ remaining: totalSeconds });
-                    }
+                    timerElement.textContent = `${h}:${m}:${s}`;
+                    
+                    // Update timer di Firebase setiap detik
+                    updateTimerInFirebase(rowId, {
+                        timer: timerElement.textContent,
+                        remainingSeconds: totalSeconds
+                    });
                 }, 1000);
 
                 startButton.disabled = true;
                 startButton.classList.add('bg-green-500', 'text-white');
                 stopButton.disabled = false;
 
-                stopButton.addEventListener('click', () => {
-                    clearInterval(interval);
-                    startButton.disabled = false;
-                    startButton.classList.remove('bg-green-500', 'text-white');
-                    stopButton.disabled = true;
-                    if (timerId) {
-                        timersRef.child(timerId).update({ isRunning: false }); // Tandai sebagai tidak berjalan
-                    }
+                // Update status di Firebase
+                updateTimerInFirebase(rowId, {
+                    startDisabled: true,
+                    stopDisabled: false,
+                    isRunning: true,
+                    remainingSeconds: totalSeconds
+                });
+            });
+
+            stopButton.addEventListener('click', () => {
+                if (activeTimers[rowId]) {
+                    clearInterval(activeTimers[rowId]);
+                    delete activeTimers[rowId];
+                }
+                startButton.disabled = false;
+                startButton.classList.remove('bg-green-500', 'text-white');
+                stopButton.disabled = true;
+
+                // Update status di Firebase
+                updateTimerInFirebase(rowId, {
+                    startDisabled: false,
+                    stopDisabled: true,
+                    isRunning: false,
+                    timer: timerElement.textContent
                 });
             });
 
             deleteButton.addEventListener('click', () => {
-                const timerIdToDelete = row.getAttribute('data-timer-id'); // Dapatkan ID Firebase dari atribut
-                if (timerIdToDelete) {
-                    timersRef.child(timerIdToDelete).remove() // Hapus data dari Firebase
-                        .then(() => {
-                            console.log('Timer dihapus dari Firebase');
-                            row.remove();
-                            updateRowNumbers();
-                        })
-                        .catch((error) => {
-                            console.error('Gagal menghapus timer dari Firebase:', error);
-                        });
-                } else {
-                    row.remove(); // Jika belum disimpan di Firebase, hapus dari tampilan saja
-                    updateRowNumbers();
+                if (activeTimers[rowId]) {
+                    clearInterval(activeTimers[rowId]);
+                    delete activeTimers[rowId];
                 }
+                deleteTimerFromFirebase(rowId);
+                row.remove();
+                updateRowNumbers();
             });
 
             nameInput.addEventListener('input', () => {
-                // Jika timer sudah disimpan di Firebase, perbarui namanya
-                if (timerId) {
-                    timersRef.child(timerId).update({ name: nameInput.value });
-                }
+                updateTimerInFirebase(rowId, {
+                    name: nameInput.value
+                });
             });
         }
 
-        // Fungsi untuk memperbarui nomor urut baris
         function updateRowNumbers() {
             document.querySelectorAll('#timer-table tbody tr').forEach((row, index) => {
                 row.querySelector('td').textContent = index + 1;
             });
         }
 
-        // Fungsi untuk memuat data timer dari Firebase saat halaman dimuat
+        // Fungsi Firebase
+        function addTimerToFirebase(timerData) {
+            const newTimerRef = firebase.push(firebase.ref(firebase.db, 'timers'));
+            firebase.set(newTimerRef, timerData);
+            return newTimerRef.key; // Mengembalikan ID unik
+        }
+
+        function updateTimerInFirebase(timerId, updates) {
+            const timerRef = firebase.ref(firebase.db, `timers/${timerId}`);
+            firebase.update(timerRef, updates);
+        }
+
+        function deleteTimerFromFirebase(timerId) {
+            const timerRef = firebase.ref(firebase.db, `timers/${timerId}`);
+            firebase.remove(timerRef);
+        }
+
         function loadTimersFromFirebase() {
-            timersRef.on('child_added', (snapshot) => {
-                const timerData = snapshot.val();
-                const timerId = snapshot.key; // ID unik dari Firebase
-
-                if (timerData) {
-                    const tableBody = document.querySelector('#timer-table tbody');
-                    const newRow = document.createElement('tr');
-                    newRow.setAttribute('data-timer-id', timerId); // Tambahkan ID Firebase ke atribut baris
-                    const rowCount = tableBody.rows.length + 1; // Untuk nomor urut tampilan
-
-                    newRow.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center"><span class="math-inline">\{rowCount\}</td\>
-<td class\="px\-6 py\-4 whitespace\-nowrap text\-center"\>
-<input type\="text" placeholder\="Masukkan Nama" class\="border border\-gray\-300 rounded px\-2 py\-1 w\-full" value\="</span>{timerData.name || ''}">
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <input type="text" placeholder="HH:MM:SS" class="border border-gray-300 rounded px-2 py-1 w-full timer-input" value="${timerData.duration || '00:00:00'}">
-                            <div class="bg-gray-800 text-white text-center rounded px-4 py-2 timer text-lg <span class="math-inline">\{timerData\.isRunning ? '' \: 'hidden'\}"\></span>{formatTime(timerData.remaining || 0)}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <button class="bg-white border border-gray-300 rounded px-2 py-1 start-btn btn w-full" ${timerData.isRunning ? 'disabled' : ''}>Mulai</button>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <button class="bg-gray-200 border border-gray-300 rounded px-2 py-1 stop-btn btn w-full" ${!timerData.isRunning ? 'disabled' : ''}>Stop</button>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <button class="bg-red-500 text-white border border-gray-300 rounded px-2 py-1 delete-btn btn w-full">Hapus</button>
-                        </td>
-                    `;
-                    tableBody.appendChild(newRow);
-                    addEventListenersToRow(newRow);
-
-                    // Jika timer sedang berjalan saat dimuat, mulai interval
-                    if (timerData.isRunning && timerData.remaining > 0) {
-                        startExistingTimer(newRow, timerData.remaining, timerId);
-                    }
+            const timersRef = firebase.ref(firebase.db, 'timers');
+            firebase.onValue(timersRef, (snapshot) => {
+                const timers = snapshot.val();
+                const tableBody = document.querySelector('#timer-table tbody');
+                tableBody.innerHTML = ''; // Kosongkan tabel
+                
+                if (timers) {
+                    Object.keys(timers).forEach((timerId) => {
+                        const timer = timers[timerId];
+                        const newRow = document.createElement('tr');
+                        newRow.setAttribute('data-id', timerId);
+                        
+                        newRow.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">${timer.no || ''}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <input type="text" placeholder="Masukkan Nama" class="border border-gray-300 rounded px-2 py-1 w-full" value="${timer.name || ''}">
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <input type="text" placeholder="HH:MM:SS" class="border border-gray-300 rounded px-2 py-1 w-full timer-input" value="${timer.initialTime || '24:00:00'}">
+                                <div class="bg-gray-800 text-white text-center rounded px-4 py-2 timer text-lg ${timer.isRunning ? '' : 'hidden'}">${timer.timer || '24:00:00'}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <button class="bg-white border border-gray-300 rounded px-2 py-1 start-btn btn w-full" ${timer.startDisabled ? 'disabled' : ''}>Mulai</button>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <button class="bg-gray-200 border border-gray-300 rounded px-2 py-1 stop-btn btn w-full" ${timer.stopDisabled ? 'disabled' : ''}>Stop</button>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <button class="bg-red-500 text-white border border-gray-300 rounded px-2 py-1 delete-btn btn w-full">Hapus</button>
+                            </td>
+                        `;
+                        
+                        tableBody.appendChild(newRow);
+                        addEventListenersToRow(newRow, timerId);
+                        
+                        // Jika timer sedang berjalan, mulai ulang countdown
+                        if (timer.isRunning && timer.remainingSeconds) {
+                            const timerElement = newRow.querySelector('.timer');
+                            const startButton = newRow.querySelector('.start-btn');
+                            const stopButton = newRow.querySelector('.stop-btn');
+                            const timerInput = newRow.querySelector('.timer-input');
+                            
+                            timerInput.classList.add('hidden');
+                            timerElement.classList.remove('hidden');
+                            startButton.disabled = true;
+                            startButton.classList.add('bg-green-500', 'text-white');
+                            stopButton.disabled = false;
+                            
+                            let totalSeconds = timer.remainingSeconds;
+                            
+                            // Hentikan timer sebelumnya jika ada
+                            if (activeTimers[timerId]) {
+                                clearInterval(activeTimers[timerId]);
+                            }
+                            
+                            // Mulai timer baru
+                            activeTimers[timerId] = setInterval(() => {
+                                if (totalSeconds <= 0) {
+                                    clearInterval(activeTimers[timerId]);
+                                    delete activeTimers[timerId];
+                                    playAlarm();
+                                    updateTimerInFirebase(timerId, {
+                                        startDisabled: false,
+                                        stopDisabled: true,
+                                        isRunning: false
+                                    });
+                                    return;
+                                }
+                                totalSeconds--;
+                                const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+                                const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+                                const s = String(totalSeconds % 60).padStart(2, '0');
+                                timerElement.textContent = `${h}:${m}:${s}`;
+                                
+                                updateTimerInFirebase(timerId, {
+                                    timer: timerElement.textContent,
+                                    remainingSeconds: totalSeconds
+                                });
+                            }, 1000);
+                        }
+                    });
                 }
+                updateRowNumbers();
             });
         }
 
-        // Fungsi untuk memformat detik menjadi HH:MM:SS
-        function formatTime(totalSeconds) {
-            const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-            const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-            const s = String(totalSeconds % 60).padStart(2, '0');
-            return `<span class="math-inline">\{h\}\:</span>{m}:${s}`;
+        function updateDateTime() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' };
+            const formattedDateTime = now.toLocaleDateString('id-ID', options);
+            document.getElementById('date-time').textContent = formattedDateTime;
         }
 
-        // Fungsi untuk memulai timer yang sudah ada saat halaman dimuat
-        function startExistingTimer(row, remainingTime, timerId) {
-            const timerElement = row.querySelector('.timer');
-            const startButton = row.querySelector('.start-btn');
-            const stopButton = row.querySelector('.stop-btn');
-            const nameInput = row.querySelector('input[type="text"]');
-
-            let totalSeconds = remainingTime;
-            let interval = setInterval(() => { // Tambahkan deklarasi interval di sini
-            if (totalSeconds <= 0) {
-                clearInterval(interval);
-                playAlarm();
-                showNotification(`Timer untuk "${nameInput.value}" telah habis!`);
-                timersRef.child(timerId).update({ isRunning: false, remaining: 0 });
-                return;
-            }
-            totalSeconds--;
-            timerElement.textContent = formatTime(totalSeconds);
-            timersRef.child(timerId).update({ remaining: totalSeconds });
-        }, 1000);
-
-        startButton.disabled = true;
-        startButton.classList.add('bg-green-500', 'text-white');
-        stopButton.disabled = false;
-
-        stopButton.addEventListener('click', () => {
-            clearInterval(interval);
-            startButton.disabled = false;
-            startButton.classList.remove('bg-green-500', 'text-white');
-            stopButton.disabled = true;
-            timersRef.child(timerId).update({ isRunning: false });
-        });
-    }
-}
-
-// Fungsi untuk memuat data timer dari Firebase saat halaman dimuat (lanjutan)
-function loadTimersFromFirebase() {
-    timersRef.on('child_added', (snapshot) => {
-        const timerData = snapshot.val();
-        const timerId = snapshot.key; // ID unik dari Firebase
-
-        if (timerData) {
+        document.getElementById('add-row-btn').addEventListener('click', () => {
             const tableBody = document.querySelector('#timer-table tbody');
-            const newRow = document.createElement('tr');
-            newRow.setAttribute('data-timer-id', timerId); // Tambahkan ID Firebase ke atribut baris
-            const rowCount = tableBody.rows.length + 1; // Untuk nomor urut tampilan
+            const rowCount = tableBody.rows.length + 1;
+            
+            const newTimerData = {
+                no: rowCount,
+                name: '',
+                timer: '24:00:00',
+                initialTime: '24:00:00',
+                startDisabled: false,
+                stopDisabled: true,
+                isRunning: false
+            };
+            
+            const timerId = addTimerToFirebase(newTimerData);
+        });
 
-            newRow.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">${rowCount}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <input type="text" placeholder="Masukkan Nama" class="border border-gray-300 rounded px-2 py-1 w-full" value="${timerData.name || ''}">
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <input type="text" placeholder="HH:MM:SS" class="border border-gray-300 rounded px-2 py-1 w-full timer-input" value="${timerData.duration || '00:00:00'}">
-                    <div class="bg-gray-800 text-white text-center rounded px-4 py-2 timer text-lg ${timerData.isRunning ? '' : 'hidden'}">${formatTime(timerData.remaining || 0)}</div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <button class="bg-white border border-gray-300 rounded px-2 py-1 start-btn btn w-full" ${timerData.isRunning ? 'disabled' : ''}>Mulai</button>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <button class="bg-gray-200 border border-gray-300 rounded px-2 py-1 stop-btn btn w-full" ${!timerData.isRunning ? 'disabled' : ''}>Stop</button>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <button class="bg-red-500 text-white border border-gray-300 rounded px-2 py-1 delete-btn btn w-full">Hapus</button>
-                </td>
-            `;
-            tableBody.appendChild(newRow);
-            addEventListenersToRow(newRow);
-
-            // Jika timer sedang berjalan saat dimuat, mulai interval
-            if (timerData.isRunning && timerData.remaining > 0) {
-                startExistingTimer(newRow, timerData.remaining, timerId);
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('start-btn')) {
+                const row = event.target.closest('tr');
+                const timerInput = row.querySelector('.timer-input');
+                const timerElement = row.querySelector('.timer');
+                timerElement.textContent = timerInput.value;
+                timerInput.classList.add('hidden');
+                timerElement.classList.remove('hidden');
             }
-        }
-    });
-}
+        });
 
-// Fungsi untuk memformat detik menjadi HH:MM:SS
-function formatTime(totalSeconds) {
-    const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-    const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-    const s = String(totalSeconds % 60).padStart(2, '0');
-    return `${h}:${m}:${s}`;
-}
-
-// Fungsi untuk memulai timer yang sudah ada saat halaman dimuat
-function startExistingTimer(row, remainingTime, timerId) {
-    const timerElement = row.querySelector('.timer');
-    const startButton = row.querySelector('.start-btn');
-    const stopButton = row.querySelector('.stop-btn');
-    const nameInput = row.querySelector('input[type="text"]');
-
-    let totalSeconds = remainingTime;
-    let interval = setInterval(() => {
-        if (totalSeconds <= 0) {
-            clearInterval(interval);
-            playAlarm();
-            showNotification(`Timer untuk "${nameInput.value}" telah habis!`);
-            timersRef.child(timerId).update({ isRunning: false, remaining: 0 });
-            return;
-        }
-        totalSeconds--;
-        timerElement.textContent = formatTime(totalSeconds);
-        timersRef.child(timerId).update({ remaining: totalSeconds });
-    }, 1000);
-
-    startButton.disabled = true;
-    startButton.classList.add('bg-green-500', 'text-white');
-    stopButton.disabled = false;
-}
-
-// Fungsi untuk memperbarui tanggal dan waktu
-function updateDateTime() {
-    const now = new Date();
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Jakarta' };
-    const formattedDateTime = now.toLocaleDateString('id-ID', options);
-    document.getElementById('date-time').textContent = formattedDateTime;
-}
-
-// Event listener untuk tombol "Tambah Tabel Baru"
-document.getElementById('add-row-btn').addEventListener('click', () => {
-    const tableBody = document.querySelector('#timer-table tbody');
-    const rowCount = tableBody.rows.length + 1;
-    const newRow = document.createElement('tr');
-    newRow.innerHTML = `
-        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">${rowCount}</td>
-        <td class="px-6 py-4 whitespace-nowrap text-center">
-            <input type="text" placeholder="Masukkan Nama" class="border border-gray-300 rounded px-2 py-1 w-full">
-        </td>
-        <td class="px-6 py-4 whitespace-nowrap text-center">
-            <input type="text" placeholder="HH:MM:SS" class="border border-gray-300 rounded px-2 py-1 w-full timer-input" value="00:00:00">
-            <div class="bg-gray-800 text-white text-center rounded px-4 py-2 timer text-lg hidden">00:00:00</div>
-        </td>
-        <td class="px-6 py-4 whitespace-nowrap text-center">
-            <button class="bg-white border border-gray-300 rounded px-2 py-1 start-btn btn w-full">Mulai</button>
-        </td>
-        <td class="px-6 py-4 whitespace-nowrap text-center">
-            <button class="bg-gray-200 border border-gray-300 rounded px-2 py-1 stop-btn btn w-full" disabled>Stop</button>
-        </td>
-        <td class="px-6 py-4 whitespace-nowrap text-center">
-            <button class="bg-red-500 text-white border border-gray-300 rounded px-2 py-1 delete-btn btn w-full">Hapus</button>
-        </td>
-    `;
-    tableBody.appendChild(newRow);
-    addEventListenersToRow(newRow);
-});
-
-// Panggil fungsi untuk memuat data dari Firebase saat halaman dimuat
-window.addEventListener('load', () => {
-    updateDateTime();
-    setInterval(updateDateTime, 1000);
-    loadTimersFromFirebase();
-});
-
-// Event listener untuk menangani klik pada tombol "Mulai" di baris baru (jika ada)
-document.addEventListener('click', function(event) {
-    if (event.target.classList.contains('start-btn')) {
-        const row = event.target.closest('tr');
-        const timerInput = row.querySelector('.timer-input');
-        const timerElement = row.querySelector('.timer');
-        timerElement.textContent = timerInput.value;
-        timerInput.classList.add('hidden');
-        timerElement.classList.remove('hidden');
-    }
-});
+        window.addEventListener('load', () => {
+            loadTimersFromFirebase();
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+        });
     </script>
 </body>
 </html>
