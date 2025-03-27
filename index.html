@@ -33,6 +33,23 @@
             cursor: pointer;
             display: none;
         }
+        #notification-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #f0ad4e;
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            border: 1px solid #eea236;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: none;
+        }
+        #notification-text {
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen">
@@ -60,12 +77,13 @@
     </div>
     <audio id="alarm-sound" src="./alarm.mp3" preload="auto"></audio>
     <div id="alarm-box">Alarm</div>
-    <script>
-        // Hapus fungsi showNotification karena tidak lagi digunakan
-        // function showNotification(name, rowNumber) {
-        //     alert(`Timer pada kolom nama, no ${rowNumber} nama ${name} telah habis`);
-        // }
 
+    <div id="notification-box" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: #f0ad4e; color: white; padding: 20px; border-radius: 5px; border: 1px solid #eea236; box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2); z-index: 1000; display: none;">
+        <p id="notification-text" style="margin-bottom: 10px;"></p>
+        <button onclick="hideNotification()" style="background-color: #d9534f; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer;">Tutup</button>
+    </div>
+
+    <script>
         function playAlarm() {
             const alarmSound = document.getElementById('alarm-sound');
             const alarmBox = document.getElementById('alarm-box');
@@ -77,6 +95,18 @@
                 alarmSound.currentTime = 0;
                 alarmBox.style.display = 'none';
             });
+        }
+
+        function showNotification(message) {
+            const notificationBox = document.getElementById('notification-box');
+            const notificationText = document.getElementById('notification-text');
+            notificationText.textContent = message;
+            notificationBox.style.display = 'block';
+        }
+
+        function hideNotification() {
+            const notificationBox = document.getElementById('notification-box');
+            notificationBox.style.display = 'none';
         }
 
         function addEventListenersToRow(row) {
@@ -101,8 +131,8 @@
                 interval = setInterval(() => {
                     if (totalSeconds <= 0) {
                         clearInterval(interval);
-                        playAlarm(); // Hanya panggil playAlarm()
-                        // showNotification(nameInput.value, rowNumber); // Baris ini sudah dihapus
+                        playAlarm();
+                        showNotification(`Timer untuk "${nameInput.value}" telah habis!`);
                         return;
                     }
                     totalSeconds--;
