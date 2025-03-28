@@ -121,7 +121,7 @@
         </div>
     </div>
     
-    <audio id="alarm-sound" src="./alarm.mp3" preload="auto"></audio>
+    <audio id="alarm-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3" preload="auto"></audio>
     <div id="alarm-box">Alarm</div>
     
     <script>
@@ -162,9 +162,22 @@
         function playAlarm() {
             const alarmSound = document.getElementById('alarm-sound');
             const alarmBox = document.getElementById('alarm-box');
-            alarmSound.play();
-            alarmBox.style.display = 'block';
+            
+            // Play alarm once
+            alarmSound.currentTime = 0;
+            alarmSound.play().then(() => {
+                // Show alarm box
+                alarmBox.style.display = 'block';
+                
+                // Auto-hide after sound finishes
+                alarmSound.onended = () => {
+                    alarmBox.style.display = 'none';
+                };
+            }).catch(error => {
+                console.error("Error playing alarm:", error);
+            });
 
+            // Manual stop option
             alarmBox.addEventListener('click', () => {
                 alarmSound.pause();
                 alarmSound.currentTime = 0;
