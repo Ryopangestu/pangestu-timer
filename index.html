@@ -31,6 +31,19 @@
             margin: 0 5px;
             font-weight: bold;
         }
+        /* Notifikasi styles */
+        #notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1000;
+        }
         /* Converter styles */
         .converter-container {
             background: rgba(255,255,255,0.9);
@@ -110,6 +123,9 @@
         </div>
     </div>
     
+    <!-- Notifikasi -->
+    <div id="notification"></div>
+    
     <script>
         // Firebase Configuration
         const firebaseConfig = {
@@ -129,6 +145,18 @@
 
         // Variabel untuk menyimpan interval timer
         const activeIntervals = {};
+
+        // Fungsi untuk menampilkan notifikasi
+        function showNotification(rowNumber, timerName) {
+            const notification = document.getElementById('notification');
+            notification.textContent = `Timer #${rowNumber} (${timerName}) telah berhenti`;
+            notification.style.display = 'block';
+            
+            // Sembunyikan notifikasi setelah 5 detik
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
 
         // Fungsi Firebase Database
         async function saveTimerToFirebase(timerId, data) {
@@ -212,14 +240,12 @@
             const rowNumber = row.querySelector('td').textContent;
 
             function startTimer() {
-                // Ambil nilai dari input time
                 const timeValue = timerInput.value;
                 if (!timeValue) {
                     alert('Silakan set waktu terlebih dahulu');
                     return;
                 }
 
-                // Parse waktu dari format HH:MM:SS
                 const [hoursStr, minutesStr, secondsStr] = timeValue.split(':');
                 const hours = parseInt(hoursStr) || 0;
                 const minutes = parseInt(minutesStr) || 0;
@@ -232,7 +258,6 @@
                     return;
                 }
 
-                // Format tampilan awal
                 const h = String(hours).padStart(2, '0');
                 const m = String(minutes).padStart(2, '0');
                 const s = String(seconds).padStart(2, '0');
@@ -263,6 +288,9 @@
                             isRunning: false,
                             totalSeconds: 0
                         });
+
+                        // Tampilkan notifikasi saat timer berhenti
+                        showNotification(rowNumber, nameInput.value || 'Tanpa Nama');
                         return;
                     }
                     
@@ -330,6 +358,9 @@
                     isRunning: false,
                     timestamp: firebase.database.ServerValue.TIMESTAMP
                 });
+
+                // Tampilkan notifikasi saat dihentikan manual
+                showNotification(rowNumber, nameInput.value || 'Tanpa Nama');
             });
 
             deleteButton.addEventListener('click', async () => {
@@ -486,6 +517,9 @@
                                         isRunning: false,
                                         totalSeconds: 0
                                     });
+
+                                    // Tampilkan notifikasi saat timer berhenti
+                                    showNotification(rowNumber, timerData.name || 'Tanpa Nama');
                                     return;
                                 }
                                 
