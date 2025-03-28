@@ -131,16 +131,18 @@
 
         // Variabel untuk menyimpan interval timer
         const activeIntervals = {};
+        // Variabel untuk melacak notifikasi yang sudah ditampilkan
+        const shownNotifications = {};
 
         // Fungsi untuk menampilkan notifikasi popup
         function showNotification(title, message, icon = 'info', timer = 3000) {
-            Swal.fire({
+            return Swal.fire({
                 title: title,
                 text: message,
                 icon: icon,
                 timer: timer,
                 timerProgressBar: true,
-                showConfirmButton: false,
+                showConfirmButton: true,
                 position: 'top-end',
                 toast: true,
                 background: '#f8f9fa',
@@ -216,7 +218,8 @@
                 startDisabled: false,
                 stopDisabled: true,
                 timerVisible: false,
-                isRunning: false
+                isRunning: false,
+                hasNotified: false
             });
             
             showNotification('Berhasil', `Timer baru (#${rowCount}) telah ditambahkan`, 'success');
@@ -270,6 +273,9 @@
                         startButton.classList.remove('bg-purple-500', 'text-white');
                         stopButton.disabled = true;
                         
+                        // Set flag bahwa notifikasi sudah ditampilkan
+                        shownNotifications[rowNumber] = true;
+                        
                         await saveTimerToFirebase(rowNumber, {
                             name: nameInput.value,
                             timer: '00:00:00',
@@ -278,14 +284,23 @@
                             stopDisabled: true,
                             timerVisible: true,
                             isRunning: false,
-                            totalSeconds: 0
+                            totalSeconds: 0,
+                            hasNotified: true
                         });
 
-                        showNotification(
+                        // Tampilkan notifikasi dengan tombol OK
+                        const notification = await showNotification(
                             'Timer Selesai', 
                             `Timer #${rowNumber} (${nameInput.value || 'Tanpa Nama'}) telah berhenti`, 
-                            'info'
+                            'info',
+                            null // Tidak ada timer, harus diklik OK
                         );
+                        
+                        // Ketika notifikasi ditutup
+                        if (notification.isDismissed || notification.isConfirmed) {
+                            shownNotifications[rowNumber] = false;
+                        }
+                        
                         return;
                     }
                     
@@ -304,6 +319,7 @@
                         timerVisible: true,
                         totalSeconds: totalSeconds,
                         isRunning: true,
+                        hasNotified: false,
                         timestamp: firebase.database.ServerValue.TIMESTAMP
                     });
                 }, 1000);
@@ -321,6 +337,7 @@
                     timerVisible: true,
                     totalSeconds: totalSeconds,
                     isRunning: true,
+                    hasNotified: false,
                     timestamp: firebase.database.ServerValue.TIMESTAMP
                 });
                 
@@ -357,6 +374,7 @@
                     timerVisible: true,
                     totalSeconds: totalSeconds,
                     isRunning: false,
+                    hasNotified: false,
                     timestamp: firebase.database.ServerValue.TIMESTAMP
                 });
 
@@ -406,7 +424,8 @@
                     startDisabled: startButton.disabled,
                     stopDisabled: stopButton.disabled,
                     timerVisible: !timerDisplay.classList.contains('hidden'),
-                    isRunning: startButton.disabled
+                    isRunning: startButton.disabled,
+                    hasNotified: false
                 });
             });
 
@@ -418,7 +437,8 @@
                     startDisabled: startButton.disabled,
                     stopDisabled: stopButton.disabled,
                     timerVisible: !timerDisplay.classList.contains('hidden'),
-                    isRunning: startButton.disabled
+                    isRunning: startButton.disabled,
+                    hasNotified: false
                 });
             });
         }
@@ -534,12 +554,15 @@
                                 Math.floor((Date.now() - timerData.timestamp) / 1000) : 0;
                             let totalSeconds = Math.max(0, timerData.totalSeconds - timeElapsed);
                             
-                            const updateTimer = () => {
+                            const updateTimer = async () => {
                                 if (totalSeconds <= 0) {
                                     clearInterval(activeIntervals[rowNumber]);
                                     delete activeIntervals[rowNumber];
                                     
-                                    saveTimerToFirebase(rowNumber, {
+                                    // Set flag bahwa notifikasi sudah ditampilkan
+                                    shownNotifications[rowNumber] = true;
+                                    
+                                    await saveTimerToFirebase(rowNumber, {
                                         name: timerData.name,
                                         timer: '00:00:00',
                                         timerInputValue: timerData.timerInputValue,
@@ -547,14 +570,25 @@
                                         stopDisabled: true,
                                         timerVisible: true,
                                         isRunning: false,
-                                        totalSeconds: 0
+                                        totalSeconds: 0,
+                                        hasNotified: true
                                     });
 
-                                    showNotification(
-                                        'Timer Selesai', 
-                                        `Timer #${rowNumber} (${timerData.name || 'Tanpa Nama'}) telah berhenti`, 
-                                        'info'
-                                    );
+                                    // Hanya tampilkan notifikasi jika belum pernah ditampilkan
+                                    if (!timerData.hasNotified) {
+                                        const notification = await showNotification(
+                                            'Timer Selesai', 
+                                            `Timer #${rowNumber} (${timerData.name || 'Tanpa Nama'}) telah berhenti`, 
+                                            'info',
+                                            null // Tidak ada timer, harus diklik OK
+                                        );
+                                        
+                                        // Ketika notifikasi ditutup
+                                        if (notification.isDismissed || notification.isConfirmed) {
+                                            shownNotifications[rowNumber] = false;
+                                        }
+                                    }
+                                    
                                     return;
                                 }
                                 
@@ -571,6 +605,24 @@
                             timerDisplay.textContent = `${h}:${m}:${s}`;
                             
                             activeIntervals[rowNumber] = setInterval(updateTimer, 1000);
+                        } else if (timerData.totalSeconds === 0 && !timerData.hasNotified && !shownNotifications[rowNumber]) {
+                            // Jika timer sudah selesai dan belum ada notifikasi
+                            shownNotifications[rowNumber] = true;
+                            
+                            showNotification(
+                                'Timer Selesai', 
+                                `Timer #${rowNumber} (${timerData.name || 'Tanpa Nama'}) telah berhenti`, 
+                                'info',
+                                null // Tidak ada timer, harus diklik OK
+                            ).then((result) => {
+                                if (result.isDismissed || result.isConfirmed) {
+                                    shownNotifications[rowNumber] = false;
+                                    saveTimerToFirebase(rowNumber, {
+                                        ...timerData,
+                                        hasNotified: true
+                                    });
+                                }
+                            });
                         }
                     });
                 }
