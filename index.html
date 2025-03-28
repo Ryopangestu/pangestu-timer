@@ -23,91 +23,152 @@
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
-        body {
-            background: linear-gradient(270deg, #3b82f6, #6366f1, #8b5cf6, #a855f7);
-            background-size: 400% 400%;
-            animation: blue-purple 15s ease infinite;
-        }
-        .time-separator {
-            display: inline-block;
-            margin: 0 5px;
-            font-weight: bold;
-        }
-        /* Converter styles */
-        .converter-container {
-            background: rgba(255,255,255,0.9);
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .converter-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #333;
-        }
-        .time-input {
-            border: 1px solid #ddd;
-            padding: 8px 12px;
-            border-radius: 4px;
-            width: 100%;
-            margin: 5px 0;
-        }
-        .converter-btn {
-            margin-top: 2px;
-            padding: 6px 12px;
-            border-radius: 4px;
+        
+        /* Dark mode toggle styles */
+        .dark-mode-toggle {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
-            font-size: 0.875rem;
-            width: 100%;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        .dark-mode-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .dark-mode-toggle.dark {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .dark-mode-toggle.dark:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Dark mode styles */
+        .dark body {
+            background: linear-gradient(270deg, #1e3a8a, #4338ca, #6d28d9, #7e22ce);
+            color: #f3f4f6;
+        }
+        .dark .main-container {
+            background: #1f2937;
+            color: #f3f4f6;
+        }
+        .dark .table-header {
+            background-color: #111827;
+        }
+        .dark th {
+            background-color: #111827;
+            color: #f3f4f6;
+        }
+        .dark td {
+            background-color: #1f2937;
+            color: #f3f4f6;
+        }
+        .dark .converter-container {
+            background: rgba(17, 24, 39, 0.9);
+            color: #f3f4f6;
+        }
+        .dark .converter-title {
+            color: #f3f4f6;
+        }
+        .dark .time-input {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #f3f4f6;
+        }
+        .dark .btn {
+            color: #f3f4f6;
+        }
+        .dark .bg-white {
+            background-color: #374151 !important;
+        }
+        .dark .bg-gray-200 {
+            background-color: #4b5563 !important;
+        }
+        .dark .border-gray-300 {
+            border-color: #4b5563 !important;
+        }
+        .dark .text-gray-900 {
+            color: #f3f4f6 !important;
+        }
+        .dark .text-gray-700 {
+            color: #d1d5db !important;
+        }
+        .dark .text-gray-500 {
+            color: #9ca3af !important;
         }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen">
-    <div class="bg-white rounded-lg shadow-lg p-4 overflow-x-auto w-full max-w-7xl">
+<body class="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500">
+    <!-- Dark Mode Toggle Button -->
+    <button id="darkModeToggle" class="dark-mode-toggle" title="Toggle Dark Mode">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+    </button>
+
+    <div class="main-container bg-white rounded-lg shadow-lg p-4 mx-auto my-4 w-full max-w-7xl">
         <div class="text-center mb-4">
             <div id="date-time" class="text-lg font-semibold"></div>
         </div>
-        <table class="min-w-full divide-y divide-gray-200" id="timer-table">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Timer</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Mulai</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Stop</th>
-                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Hapus</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                <!-- Rows will be added dynamically -->
-            </tbody>
-        </table>
-        <div class="mt-4 text-center">
-            <button id="add-row-btn" class="bg-blue-500 text-white px-4 py-2 rounded">Tambah Tabel Baru</button>
+        
+        <div class="table-container overflow-x-auto mb-4 max-h-[60vh]">
+            <table class="min-w-full divide-y divide-gray-200" id="timer-table">
+                <thead class="table-header bg-gray-50 sticky top-0">
+                    <tr>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Timer</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Mulai</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Stop</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Hapus</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <!-- Rows will be added dynamically -->
+                </tbody>
+            </table>
         </div>
 
-        <!-- WIB to UTC Converter -->
-        <div class="converter-container mt-8">
-            <div class="converter-title">Konverter Waktu WIB ⇄ UTC</div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Waktu WIB</label>
-                    <input type="time" id="wib-time" class="time-input" step="1">
-                    <button id="wib-to-utc" class="converter-btn bg-blue-500 text-white">WIB → UTC</button>
-                </div>
-                <div class="flex items-center justify-center">
-                    <div class="text-2xl font-bold mt-6">⇄</div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Waktu UTC</label>
-                    <input type="time" id="utc-time" class="time-input" step="1">
-                    <button id="utc-to-wib" class="converter-btn bg-green-500 text-white">UTC → WIB</button>
-                </div>
+        <div class="mt-auto">
+            <div class="text-center mb-4">
+                <button id="add-row-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition duration-200">
+                    Tambah Tabel Baru
+                </button>
             </div>
-            <div class="mt-2 text-sm text-gray-500">
-                * WIB (Waktu Indonesia Barat) = UTC+7
+
+            <!-- WIB to UTC Converter -->
+            <div class="converter-container bg-white bg-opacity-90 rounded-lg p-4 mt-4 shadow">
+                <div class="converter-title text-lg font-bold mb-2">Konverter Waktu WIB ⇄ UTC</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Waktu WIB</label>
+                        <input type="time" id="wib-time" class="time-input border border-gray-300 rounded px-3 py-2 w-full" step="1">
+                        <button id="wib-to-utc" class="converter-btn bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded w-full mt-1 transition duration-200">
+                            WIB → UTC
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-center">
+                        <div class="text-2xl font-bold mt-6">⇄</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Waktu UTC</label>
+                        <input type="time" id="utc-time" class="time-input border border-gray-300 rounded px-3 py-2 w-full" step="1">
+                        <button id="utc-to-wib" class="converter-btn bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded w-full mt-1 transition duration-200">
+                            UTC → WIB
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2 text-sm text-gray-500">
+                    * WIB (Waktu Indonesia Barat) = UTC+7
+                </div>
             </div>
         </div>
     </div>
@@ -145,7 +206,8 @@
                 showConfirmButton: false,
                 position: 'top-end',
                 toast: true,
-                background: '#f8f9fa',
+                background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#f8f9fa',
+                color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#333',
                 width: '400px'
             });
         }
@@ -168,33 +230,33 @@
         function createNewRow(rowNumber, timerData = null) {
             const newRow = document.createElement('tr');
             newRow.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 text-center">${rowNumber}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <input type="text" placeholder="Masukkan Nama" class="border border-gray-300 rounded px-2 py-1 w-full name-input" 
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 text-center">${rowNumber}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-center">
+                    <input type="text" placeholder="Masukkan Nama" class="border border-gray-300 rounded px-2 py-1 w-full name-input bg-transparent" 
                            value="${timerData?.name || ''}">
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <input type="time" step="1" class="border border-gray-300 rounded px-2 py-1 w-full timer-input" 
+                <td class="px-4 py-3 whitespace-nowrap text-center">
+                    <input type="time" step="1" class="border border-gray-300 rounded px-2 py-1 w-full timer-input bg-transparent" 
                            value="${timerData?.timerInputValue || '24:00:00'}">
                     <div class="bg-gray-800 text-white text-center rounded px-4 py-2 timer-display text-lg 
                               ${timerData?.timerVisible ? '' : 'hidden'}">
                         ${timerData?.timer || '24:00:00'}
                     </div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
+                <td class="px-4 py-3 whitespace-nowrap text-center">
                     <button class="bg-white border border-gray-300 rounded px-2 py-1 start-btn btn w-full
                                  ${timerData?.startDisabled ? 'bg-purple-500 text-white' : ''}" 
                             ${timerData?.startDisabled ? 'disabled' : ''}>
                         Mulai
                     </button>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
+                <td class="px-4 py-3 whitespace-nowrap text-center">
                     <button class="bg-gray-200 border border-gray-300 rounded px-2 py-1 stop-btn btn w-full" 
                             ${timerData?.stopDisabled ? 'disabled' : ''}>
                         Stop
                     </button>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
+                <td class="px-4 py-3 whitespace-nowrap text-center">
                     <button class="bg-red-500 text-white border border-gray-300 rounded px-2 py-1 delete-btn btn w-full">
                         Hapus
                     </button>
@@ -384,7 +446,9 @@
                     cancelButtonColor: '#3085d6',
                     confirmButtonText: 'Ya, Hapus!',
                     cancelButtonText: 'Batal',
-                    width: '500px'
+                    width: '500px',
+                    background: document.documentElement.classList.contains('dark') ? '#1f2937' : '#fff',
+                    color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#333'
                 });
 
                 if (isConfirmed) {
@@ -521,8 +585,40 @@
             showNotification('Berhasil', 'Waktu UTC telah dikonversi ke WIB', 'success');
         }
 
+        // Dark Mode Functionality
+        function setupDarkMode() {
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+            
+            // Check local storage or prefered color scheme
+            if (localStorage.getItem('darkMode') === 'enabled' || 
+                (localStorage.getItem('darkMode') === null && prefersDarkScheme.matches)) {
+                document.documentElement.classList.add('dark');
+                darkModeToggle.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>';
+                darkModeToggle.classList.add('dark');
+            }
+            
+            darkModeToggle.addEventListener('click', () => {
+                const html = document.documentElement;
+                if (html.classList.contains('dark')) {
+                    html.classList.remove('dark');
+                    localStorage.setItem('darkMode', 'disabled');
+                    darkModeToggle.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>';
+                    darkModeToggle.classList.remove('dark');
+                } else {
+                    html.classList.add('dark');
+                    localStorage.setItem('darkMode', 'enabled');
+                    darkModeToggle.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>';
+                    darkModeToggle.classList.add('dark');
+                }
+            });
+        }
+
         // Initialize the app
         document.addEventListener('DOMContentLoaded', function() {
+            // Setup Dark Mode
+            setupDarkMode();
+            
             // Setup Firebase listener
             listenForTimerChanges((timers) => {
                 const tableBody = document.querySelector('#timer-table tbody');
