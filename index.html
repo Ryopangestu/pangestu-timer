@@ -121,8 +121,8 @@
         </div>
     </div>
     
-    <audio id="alarm-sound" src="./alarm.mp3" preload="auto"></audio>
-    <div id="alarm-box">Alarm</div>
+    <audio id="alarm-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3" preload="auto"></audio>
+    <div id="alarm-box">Alarm (Klik untuk berhenti)</div>
     
     <script>
         // Firebase Configuration
@@ -143,6 +143,7 @@
 
         // Variabel untuk menyimpan interval timer
         const activeIntervals = {};
+        let isAlarmPlaying = false;
 
         // Fungsi Firebase Database
         async function saveTimerToFirebase(timerId, data) {
@@ -160,30 +161,45 @@
         }
 
         function playAlarm() {
+            if (isAlarmPlaying) return;
+            
             const alarmSound = document.getElementById('alarm-sound');
             const alarmBox = document.getElementById('alarm-box');
             
-            // Play alarm once
+            // Set status alarm sedang berbunyi
+            isAlarmPlaying = true;
+            
+            // Hentikan alarm jika sedang berbunyi dan reset
+            alarmSound.pause();
             alarmSound.currentTime = 0;
+            
+            // Atur tidak looping
+            alarmSound.loop = false;
+            
+            // Tampilkan alarm box
+            alarmBox.style.display = 'block';
+            
+            // Mainkan alarm
             alarmSound.play().then(() => {
-                // Show alarm box
-                alarmBox.style.display = 'block';
-                
-                // Auto-hide after sound finishes
+                // Ketika selesai bermain
                 alarmSound.onended = () => {
                     alarmBox.style.display = 'none';
+                    isAlarmPlaying = false;
                 };
             }).catch(error => {
                 console.error("Error playing alarm:", error);
-            });
-
-            // Manual stop option
-            alarmBox.addEventListener('click', () => {
-                alarmSound.pause();
-                alarmSound.currentTime = 0;
-                alarmBox.style.display = 'none';
+                isAlarmPlaying = false;
             });
         }
+
+        // Event listener untuk alarm box (dipindahkan ke bagian inisialisasi)
+        document.getElementById('alarm-box').addEventListener('click', function() {
+            const alarmSound = document.getElementById('alarm-sound');
+            alarmSound.pause();
+            alarmSound.currentTime = 0;
+            this.style.display = 'none';
+            isAlarmPlaying = false;
+        });
 
         function createNewRow(rowNumber, timerData = null) {
             const newRow = document.createElement('tr');
