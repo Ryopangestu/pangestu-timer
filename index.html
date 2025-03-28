@@ -26,17 +26,6 @@
             background-size: 400% 400%;
             animation: blue-purple 15s ease infinite;
         }
-        #alarm-box {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: red;
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            display: none;
-        }
         .time-separator {
             display: inline-block;
             margin: 0 5px;
@@ -121,9 +110,6 @@
         </div>
     </div>
     
-    <audio id="alarm-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3" preload="auto"></audio>
-    <div id="alarm-box">Alarm (Klik untuk berhenti)</div>
-    
     <script>
         // Firebase Configuration
         const firebaseConfig = {
@@ -143,7 +129,6 @@
 
         // Variabel untuk menyimpan interval timer
         const activeIntervals = {};
-        let isAlarmPlaying = false;
 
         // Fungsi Firebase Database
         async function saveTimerToFirebase(timerId, data) {
@@ -160,47 +145,6 @@
             });
         }
 
-        function playAlarm() {
-            if (isAlarmPlaying) return;
-            
-            const alarmSound = document.getElementById('alarm-sound');
-            const alarmBox = document.getElementById('alarm-box');
-            
-            // Set status alarm sedang berbunyi
-            isAlarmPlaying = true;
-            
-            // Hentikan alarm jika sedang berbunyi dan reset
-            alarmSound.pause();
-            alarmSound.currentTime = 0;
-            
-            // Atur tidak looping
-            alarmSound.loop = false;
-            
-            // Tampilkan alarm box
-            alarmBox.style.display = 'block';
-            
-            // Mainkan alarm
-            alarmSound.play().then(() => {
-                // Ketika selesai bermain
-                alarmSound.onended = () => {
-                    alarmBox.style.display = 'none';
-                    isAlarmPlaying = false;
-                };
-            }).catch(error => {
-                console.error("Error playing alarm:", error);
-                isAlarmPlaying = false;
-            });
-        }
-
-        // Event listener untuk alarm box (dipindahkan ke bagian inisialisasi)
-        document.getElementById('alarm-box').addEventListener('click', function() {
-            const alarmSound = document.getElementById('alarm-sound');
-            alarmSound.pause();
-            alarmSound.currentTime = 0;
-            this.style.display = 'none';
-            isAlarmPlaying = false;
-        });
-
         function createNewRow(rowNumber, timerData = null) {
             const newRow = document.createElement('tr');
             newRow.innerHTML = `
@@ -210,7 +154,7 @@
                            value="${timerData?.name || ''}">
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <input type="text" placeholder="HH:MM:SS" class="border border-gray-300 rounded px-2 py-1 w-full timer-input" 
+                    <input type="time" step="1" class="border border-gray-300 rounded px-2 py-1 w-full timer-input" 
                            value="${timerData?.timerInputValue || '24:00:00'}">
                     <div class="bg-gray-800 text-white text-center rounded px-4 py-2 timer-display text-lg 
                               ${timerData?.timerVisible ? '' : 'hidden'}">
@@ -268,15 +212,31 @@
             const rowNumber = row.querySelector('td').textContent;
 
             function startTimer() {
-                let [hours, minutes, seconds] = timerInput.value.split(':').map(Number);
+                // Ambil nilai dari input time
+                const timeValue = timerInput.value;
+                if (!timeValue) {
+                    alert('Silakan set waktu terlebih dahulu');
+                    return;
+                }
+
+                // Parse waktu dari format HH:MM:SS
+                const [hoursStr, minutesStr, secondsStr] = timeValue.split(':');
+                const hours = parseInt(hoursStr) || 0;
+                const minutes = parseInt(minutesStr) || 0;
+                const seconds = parseInt(secondsStr) || 0;
+                
                 let totalSeconds = hours * 3600 + minutes * 60 + seconds;
 
-                if (isNaN(totalSeconds) || totalSeconds <= 0) {
+                if (totalSeconds <= 0) {
                     alert('Masukkan waktu yang valid (HH:MM:SS)');
                     return;
                 }
 
-                timerDisplay.textContent = timerInput.value;
+                // Format tampilan awal
+                const h = String(hours).padStart(2, '0');
+                const m = String(minutes).padStart(2, '0');
+                const s = String(seconds).padStart(2, '0');
+                timerDisplay.textContent = `${h}:${m}:${s}`;
                 timerInput.classList.add('hidden');
                 timerDisplay.classList.remove('hidden');
 
@@ -288,13 +248,11 @@
                     if (totalSeconds <= 0) {
                         clearInterval(activeIntervals[rowNumber]);
                         delete activeIntervals[rowNumber];
-                        playAlarm();
                         
                         startButton.disabled = false;
                         startButton.classList.remove('bg-purple-500', 'text-white');
                         stopButton.disabled = true;
                         
-                        // Jangan hapus data dari Firebase, cukup update status
                         await saveTimerToFirebase(rowNumber, {
                             name: nameInput.value,
                             timer: '00:00:00',
@@ -388,6 +346,18 @@
             });
 
             nameInput.addEventListener('input', async () => {
+                await saveTimerToFirebase(rowNumber, {
+                    name: nameInput.value,
+                    timer: timerDisplay.textContent,
+                    timerInputValue: timerInput.value,
+                    startDisabled: startButton.disabled,
+                    stopDisabled: stopButton.disabled,
+                    timerVisible: !timerDisplay.classList.contains('hidden'),
+                    isRunning: startButton.disabled
+                });
+            });
+
+            timerInput.addEventListener('change', async () => {
                 await saveTimerToFirebase(rowNumber, {
                     name: nameInput.value,
                     timer: timerDisplay.textContent,
@@ -497,7 +467,6 @@
                             startButton.classList.add('bg-purple-500', 'text-white');
                             stopButton.disabled = false;
                             
-                            // Hitung waktu yang berlalu sejak terakhir disimpan
                             const timeElapsed = timerData.timestamp ? 
                                 Math.floor((Date.now() - timerData.timestamp) / 1000) : 0;
                             let totalSeconds = Math.max(0, timerData.totalSeconds - timeElapsed);
@@ -506,9 +475,7 @@
                                 if (totalSeconds <= 0) {
                                     clearInterval(activeIntervals[rowNumber]);
                                     delete activeIntervals[rowNumber];
-                                    playAlarm();
                                     
-                                    // Update status tanpa menghapus data
                                     saveTimerToFirebase(rowNumber, {
                                         name: timerData.name,
                                         timer: '00:00:00',
@@ -529,7 +496,6 @@
                                 timerDisplay.textContent = `${h}:${m}:${s}`;
                             };
                             
-                            // Update langsung tanpa menunggu interval pertama
                             const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
                             const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
                             const s = String(totalSeconds % 60).padStart(2, '0');
