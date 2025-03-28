@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timer Table with Firebase</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SweetAlert2 untuk notifikasi -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
@@ -30,19 +32,6 @@
             display: inline-block;
             margin: 0 5px;
             font-weight: bold;
-        }
-        /* Notifikasi styles */
-        #notification {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #4CAF50;
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            display: none;
-            z-index: 1000;
         }
         /* Converter styles */
         .converter-container {
@@ -123,9 +112,6 @@
         </div>
     </div>
     
-    <!-- Notifikasi -->
-    <div id="notification"></div>
-    
     <script>
         // Firebase Configuration
         const firebaseConfig = {
@@ -146,16 +132,20 @@
         // Variabel untuk menyimpan interval timer
         const activeIntervals = {};
 
-        // Fungsi untuk menampilkan notifikasi
-        function showNotification(rowNumber, timerName) {
-            const notification = document.getElementById('notification');
-            notification.textContent = `Timer #${rowNumber} (${timerName}) telah berhenti`;
-            notification.style.display = 'block';
-            
-            // Sembunyikan notifikasi setelah 5 detik
-            setTimeout(() => {
-                notification.style.display = 'none';
-            }, 5000);
+        // Fungsi untuk menampilkan notifikasi popup
+        function showNotification(title, message, icon = 'info', timer = 3000) {
+            Swal.fire({
+                title: title,
+                text: message,
+                icon: icon,
+                timer: timer,
+                timerProgressBar: true,
+                showConfirmButton: false,
+                position: 'top-end',
+                toast: true,
+                background: '#f8f9fa',
+                width: '400px'
+            });
         }
 
         // Fungsi Firebase Database
@@ -228,6 +218,8 @@
                 timerVisible: false,
                 isRunning: false
             });
+            
+            showNotification('Berhasil', `Timer baru (#${rowCount}) telah ditambahkan`, 'success');
         }
 
         function addEventListenersToRow(row) {
@@ -242,7 +234,7 @@
             function startTimer() {
                 const timeValue = timerInput.value;
                 if (!timeValue) {
-                    alert('Silakan set waktu terlebih dahulu');
+                    showNotification('Peringatan', 'Silakan set waktu terlebih dahulu', 'warning');
                     return;
                 }
 
@@ -254,7 +246,7 @@
                 let totalSeconds = hours * 3600 + minutes * 60 + seconds;
 
                 if (totalSeconds <= 0) {
-                    alert('Masukkan waktu yang valid (HH:MM:SS)');
+                    showNotification('Peringatan', 'Masukkan waktu yang valid (HH:MM:SS)', 'warning');
                     return;
                 }
 
@@ -289,8 +281,11 @@
                             totalSeconds: 0
                         });
 
-                        // Tampilkan notifikasi saat timer berhenti
-                        showNotification(rowNumber, nameInput.value || 'Tanpa Nama');
+                        showNotification(
+                            'Timer Selesai', 
+                            `Timer #${rowNumber} (${nameInput.value || 'Tanpa Nama'}) telah berhenti`, 
+                            'info'
+                        );
                         return;
                     }
                     
@@ -328,6 +323,12 @@
                     isRunning: true,
                     timestamp: firebase.database.ServerValue.TIMESTAMP
                 });
+                
+                showNotification(
+                    'Timer Dimulai', 
+                    `Timer #${rowNumber} (${nameInput.value || 'Tanpa Nama'}) telah dimulai`, 
+                    'success'
+                );
             }
 
             startButton.addEventListener('click', startTimer);
@@ -359,12 +360,27 @@
                     timestamp: firebase.database.ServerValue.TIMESTAMP
                 });
 
-                // Tampilkan notifikasi saat dihentikan manual
-                showNotification(rowNumber, nameInput.value || 'Tanpa Nama');
+                showNotification(
+                    'Timer Dihentikan', 
+                    `Timer #${rowNumber} (${nameInput.value || 'Tanpa Nama'}) dihentikan manual`, 
+                    'warning'
+                );
             });
 
             deleteButton.addEventListener('click', async () => {
-                if (confirm('Apakah Anda yakin ingin menghapus timer ini?')) {
+                const { isConfirmed } = await Swal.fire({
+                    title: 'Konfirmasi Hapus',
+                    html: `Yakin ingin menghapus <b>Timer #${rowNumber}</b> (${nameInput.value || 'Tanpa Nama'})?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Ya, Hapus!',
+                    cancelButtonText: 'Batal',
+                    width: '500px'
+                });
+
+                if (isConfirmed) {
                     if (activeIntervals[rowNumber]) {
                         clearInterval(activeIntervals[rowNumber]);
                         delete activeIntervals[rowNumber];
@@ -373,6 +389,12 @@
                     await deleteTimerFromFirebase(rowNumber);
                     row.remove();
                     updateRowNumbers();
+                    
+                    showNotification(
+                        'Berhasil', 
+                        `Timer #${rowNumber} telah dihapus`, 
+                        'success'
+                    );
                 }
             });
 
@@ -454,26 +476,36 @@
             const wibTimeInput = document.getElementById('wib-time');
             const utcTimeInput = document.getElementById('utc-time');
             
-            if (!wibTimeInput.value) return;
+            if (!wibTimeInput.value) {
+                showNotification('Peringatan', 'Masukkan waktu WIB terlebih dahulu', 'warning');
+                return;
+            }
             
             const [hours, minutes, seconds] = wibTimeInput.value.split(':').map(Number);
             let utcHours = hours - 7;
             if (utcHours < 0) utcHours += 24;
             
             utcTimeInput.value = `${String(utcHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            showNotification('Berhasil', 'Waktu WIB telah dikonversi ke UTC', 'success');
         }
 
         function convertUTCtoWIB() {
             const wibTimeInput = document.getElementById('wib-time');
             const utcTimeInput = document.getElementById('utc-time');
             
-            if (!utcTimeInput.value) return;
+            if (!utcTimeInput.value) {
+                showNotification('Peringatan', 'Masukkan waktu UTC terlebih dahulu', 'warning');
+                return;
+            }
             
             const [hours, minutes, seconds] = utcTimeInput.value.split(':').map(Number);
             let wibHours = hours + 7;
             if (wibHours >= 24) wibHours -= 24;
             
             wibTimeInput.value = `${String(wibHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            showNotification('Berhasil', 'Waktu UTC telah dikonversi ke WIB', 'success');
         }
 
         // Initialize the app
@@ -518,8 +550,11 @@
                                         totalSeconds: 0
                                     });
 
-                                    // Tampilkan notifikasi saat timer berhenti
-                                    showNotification(rowNumber, timerData.name || 'Tanpa Nama');
+                                    showNotification(
+                                        'Timer Selesai', 
+                                        `Timer #${rowNumber} (${timerData.name || 'Tanpa Nama'}) telah berhenti`, 
+                                        'info'
+                                    );
                                     return;
                                 }
                                 
