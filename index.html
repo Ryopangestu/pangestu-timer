@@ -104,6 +104,14 @@
         .dark .text-gray-500 {
             color: #9ca3af !important;
         }
+        .finish-time {
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+        .dark .finish-time {
+            color: #9ca3af;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500">
@@ -126,6 +134,7 @@
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Timer</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Selesai Pada</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Mulai</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Stop</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Hapus</th>
@@ -229,9 +238,21 @@
                 day: 'numeric', 
                 hour: '2-digit', 
                 minute: '2-digit', 
-                second: '2-digit'
+                second: '2-digit',
+                timeZone: 'Asia/Jakarta'
             };
             return date.toLocaleDateString('id-ID', options);
+        }
+
+        // Fungsi untuk memformat waktu selesai (simple version)
+        function formatFinishTime(date) {
+            const options = {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                timeZone: 'Asia/Jakarta'
+            };
+            return date.toLocaleTimeString('id-ID', options) + ' WIB';
         }
 
         // Fungsi Firebase Database
@@ -264,6 +285,12 @@
                               ${timerData?.timerVisible ? '' : 'hidden'}">
                         ${timerData?.timer || '24:00:00'}
                     </div>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-center finish-time-display">
+                    ${timerData?.finishTime ? 
+                        `<div class="finish-time">${formatFinishTime(new Date(timerData.finishTime))}</div>
+                         <div class="finish-date text-xs">${formatDateTime(new Date(timerData.finishTime))}</div>` : 
+                        '<div class="finish-time">-</div>'}
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-center">
                     <button class="bg-white border border-gray-300 rounded px-2 py-1 start-btn btn w-full
@@ -315,6 +342,7 @@
             const timerDisplay = row.querySelector('.timer-display');
             const timerInput = row.querySelector('.timer-input');
             const nameInput = row.querySelector('.name-input');
+            const finishTimeDisplay = row.querySelector('.finish-time-display');
             const rowNumber = row.querySelector('td').textContent;
 
             function startTimer() {
@@ -339,8 +367,14 @@
                 // Hitung waktu selesai
                 const now = new Date();
                 const finishTime = new Date(now.getTime() + totalSeconds * 1000);
-                const finishTimeFormatted = formatTime(finishTime);
+                const finishTimeFormatted = formatFinishTime(finishTime);
                 const finishDateTimeFormatted = formatDateTime(finishTime);
+
+                // Update tampilan waktu selesai
+                finishTimeDisplay.innerHTML = `
+                    <div class="finish-time">${finishTimeFormatted}</div>
+                    <div class="finish-date text-xs">${finishDateTimeFormatted}</div>
+                `;
 
                 const h = String(hours).padStart(2, '0');
                 const m = String(minutes).padStart(2, '0');
@@ -370,8 +404,12 @@
                             stopDisabled: true,
                             timerVisible: true,
                             isRunning: false,
-                            totalSeconds: 0
+                            totalSeconds: 0,
+                            finishTime: null
                         });
+
+                        // Update tampilan waktu selesai
+                        finishTimeDisplay.innerHTML = '<div class="finish-time">-</div>';
 
                         // Hanya tampilkan notifikasi jika belum pernah ditampilkan
                         if (!shownNotifications.has(rowNumber)) {
@@ -401,7 +439,8 @@
                         timerVisible: true,
                         totalSeconds: totalSeconds,
                         isRunning: true,
-                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                        timestamp: firebase.database.ServerValue.TIMESTAMP,
+                        finishTime: finishTime.getTime()
                     });
                 }, 1000);
 
@@ -425,7 +464,7 @@
                 showNotification(
                     'Timer Dimulai', 
                     `Timer #${rowNumber} (${nameInput.value || 'Tanpa Nama'}) telah dimulai\n` +
-                    `Akan selesai pada: ${finishTimeFormatted} WIB\n` +
+                    `Akan selesai pada: ${finishTimeFormatted}\n` +
                     `(${finishDateTimeFormatted})`,
                     'success'
                 );
@@ -457,8 +496,12 @@
                     timerVisible: true,
                     totalSeconds: totalSeconds,
                     isRunning: false,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    finishTime: null
                 });
+
+                // Update tampilan waktu selesai
+                finishTimeDisplay.innerHTML = '<div class="finish-time">-</div>';
 
                 showNotification(
                     'Timer Dihentikan', 
@@ -509,7 +552,10 @@
                     startDisabled: startButton.disabled,
                     stopDisabled: stopButton.disabled,
                     timerVisible: !timerDisplay.classList.contains('hidden'),
-                    isRunning: startButton.disabled
+                    isRunning: startButton.disabled,
+                    finishTime: startButton.disabled ? new Date().getTime() + (parseInt(timerDisplay.textContent.split(':')[0]) * 3600 + 
+                                                                             parseInt(timerDisplay.textContent.split(':')[1]) * 60 + 
+                                                                             parseInt(timerDisplay.textContent.split(':')[2])) * 1000 : null
                 });
             });
 
@@ -665,6 +711,7 @@
                             const timerDisplay = newRow.querySelector('.timer-display');
                             const startButton = newRow.querySelector('.start-btn');
                             const stopButton = newRow.querySelector('.stop-btn');
+                            const finishTimeDisplay = newRow.querySelector('.finish-time-display');
                             
                             startButton.disabled = true;
                             startButton.classList.add('bg-purple-500', 'text-white');
@@ -674,6 +721,15 @@
                             const timeElapsed = timerData.timestamp ? 
                                 Math.floor((Date.now() - timerData.timestamp) / 1000) : 0;
                             let totalSeconds = Math.max(0, timerData.totalSeconds - timeElapsed);
+                            
+                            // Update tampilan waktu selesai
+                            if (timerData.finishTime) {
+                                const finishTime = new Date(timerData.finishTime);
+                                finishTimeDisplay.innerHTML = `
+                                    <div class="finish-time">${formatFinishTime(finishTime)}</div>
+                                    <div class="finish-date text-xs">${formatDateTime(finishTime)}</div>
+                                `;
+                            }
                             
                             const updateTimer = async () => {
                                 if (totalSeconds <= 0) {
@@ -688,8 +744,12 @@
                                         stopDisabled: true,
                                         timerVisible: true,
                                         isRunning: false,
-                                        totalSeconds: 0
+                                        totalSeconds: 0,
+                                        finishTime: null
                                     });
+
+                                    // Update tampilan waktu selesai
+                                    finishTimeDisplay.innerHTML = '<div class="finish-time">-</div>';
 
                                     // Hanya tampilkan notifikasi jika belum pernah ditampilkan
                                     if (!shownNotifications.has(rowNumber)) {
