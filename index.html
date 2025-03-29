@@ -180,7 +180,7 @@
             authDomain: "pangestu-timer.firebaseapp.com",
             databaseURL: "https://pangestu-timer-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "pangestu-timer",
-            storageBucket: "pangestu-timer.firebasestorage.app",
+            storageBucket: "pangestu-timer.appspot.com",
             messagingSenderId: "423055274704",
             appId: "1:423055274704:web:3e9e438bc18439012364d5",
             measurementId: "G-0249BJFL8T"
@@ -210,6 +210,28 @@
                 color: document.documentElement.classList.contains('dark') ? '#f3f4f6' : '#333',
                 width: '400px'
             });
+        }
+
+        // Fungsi untuk memformat waktu
+        function formatTime(date) {
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${hours}:${minutes}:${seconds}`;
+        }
+
+        // Fungsi untuk memformat tanggal dan waktu lengkap
+        function formatDateTime(date) {
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit'
+            };
+            return date.toLocaleDateString('id-ID', options);
         }
 
         // Fungsi Firebase Database
@@ -314,6 +336,12 @@
                     return;
                 }
 
+                // Hitung waktu selesai
+                const now = new Date();
+                const finishTime = new Date(now.getTime() + totalSeconds * 1000);
+                const finishTimeFormatted = formatTime(finishTime);
+                const finishDateTimeFormatted = formatDateTime(finishTime);
+
                 const h = String(hours).padStart(2, '0');
                 const m = String(minutes).padStart(2, '0');
                 const s = String(seconds).padStart(2, '0');
@@ -390,12 +418,15 @@
                     timerVisible: true,
                     totalSeconds: totalSeconds,
                     isRunning: true,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    finishTime: finishTime.getTime()
                 });
                 
                 showNotification(
                     'Timer Dimulai', 
-                    `Timer #${rowNumber} (${nameInput.value || 'Tanpa Nama'}) telah dimulai`, 
+                    `Timer #${rowNumber} (${nameInput.value || 'Tanpa Nama'}) telah dimulai\n` +
+                    `Akan selesai pada: ${finishTimeFormatted} WIB\n` +
+                    `(${finishDateTimeFormatted})`,
                     'success'
                 );
             }
@@ -639,6 +670,7 @@
                             startButton.classList.add('bg-purple-500', 'text-white');
                             stopButton.disabled = false;
                             
+                            // Hitung waktu yang sudah berlalu sejak timer dimulai
                             const timeElapsed = timerData.timestamp ? 
                                 Math.floor((Date.now() - timerData.timestamp) / 1000) : 0;
                             let totalSeconds = Math.max(0, timerData.totalSeconds - timeElapsed);
@@ -679,11 +711,13 @@
                                 timerDisplay.textContent = `${h}:${m}:${s}`;
                             };
                             
+                            // Set tampilan awal
                             const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
                             const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
                             const s = String(totalSeconds % 60).padStart(2, '0');
                             timerDisplay.textContent = `${h}:${m}:${s}`;
                             
+                            // Mulai interval
                             activeIntervals[rowNumber] = setInterval(updateTimer, 1000);
                         }
                     });
