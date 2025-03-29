@@ -12,6 +12,25 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <style>
+        /* Background styles */
+        body {
+            background: linear-gradient(135deg, #00008b, #4b0082);
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            color: #f3f4f6;
+        }
+        
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .dark .main-container {
+            background: rgba(31, 41, 55, 0.95);
+        }
+        
         .btn:active {
             transform: scale(0.95);
         }
@@ -123,20 +142,12 @@
             color: #93c5fd;
         }
         
-        /* Dark mode styles */
-        .dark body {
-            background: linear-gradient(270deg, #00008b, #4b0082);
-            color: #f3f4f6;
-        }
-        .dark .main-container {
-            background: #1f2937;
-            color: #f3f4f6;
-        }
-        .dark .sticky-header {
-            background-color: #111827;
-        }
-        .dark .btn {
-            color: #f3f4f6;
+        /* Dark mode toggle styles */
+        .dark-mode-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 50;
         }
         
         /* Daily Check-in 24 jam styles */
@@ -298,8 +309,8 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-r from-darkblue to-purple-800">
-    <div class="main-container bg-white rounded-lg shadow-lg p-4 mx-auto my-4 w-full max-w-7xl">
+<body>
+    <div class="main-container p-4 mx-auto my-4 w-full max-w-7xl">
         <!-- Table container -->
         <div class="table-container">
             <!-- Sticky header group -->
