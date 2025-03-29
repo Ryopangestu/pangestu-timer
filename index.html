@@ -211,9 +211,9 @@
             background-color: #111827;
         }
         
-        /* Notification table styles */
+        /* Notification table styles - Updated position */
         .notification-container {
-            margin-top: 2rem;
+            margin: 1rem 0;
             overflow-x: auto;
             width: 100%;
         }
@@ -273,6 +273,20 @@
             animation: pulse 2s infinite;
         }
         
+        /* Main container border */
+        .main-container {
+            border: 3px solid #10b981;
+            border-radius: 0.75rem;
+        }
+        
+        /* Add row button container */
+        .add-row-container {
+            margin: 1.5rem 0;
+            padding: 1rem 0;
+            border-top: 2px solid #10b981;
+            border-bottom: 2px solid #10b981;
+        }
+        
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -314,7 +328,15 @@
                 <div id="date-time" class="text-lg font-semibold sticky-date"></div>
             </div>
             
-            <!-- Table -->
+            <!-- Notification Table - Moved to top -->
+            <div class="notification-container">
+                <div class="notification-title">Timer yang Telah Berhenti:</div>
+                <div class="notification-table" id="notification-table">
+                    <!-- Notification boxes will be added here -->
+                </div>
+            </div>
+            
+            <!-- Main Timer Table -->
             <table id="timer-table">
                 <thead class="table-header">
                     <tr>
@@ -335,18 +357,13 @@
             </table>
         </div>
 
-        <!-- Notification Table -->
-        <div class="notification-container">
-            <div class="notification-title">Timer yang Telah Berhenti:</div>
-            <div class="notification-table" id="notification-table">
-                <!-- Notification boxes will be added here -->
+        <!-- Add row button with new styling -->
+        <div class="add-row-container">
+            <div class="text-center">
+                <button id="add-row-btn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition duration-200 font-bold">
+                    Tambah Tabel Baru
+                </button>
             </div>
-        </div>
-
-        <div class="text-center mb-4">
-            <button id="add-row-btn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition duration-200">
-                Tambah Tabel Baru
-            </button>
         </div>
 
         <div class="converter-container bg-white bg-opacity-90 rounded-lg p-4 mt-4 shadow">
@@ -376,6 +393,7 @@
         </div>
     </div>
     
+    <!-- Script section remains exactly the same as before -->
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyDXjv3Yg8RJvxCrYYZvMjpEKSdxcshynTo",
