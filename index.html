@@ -166,6 +166,12 @@
         .dark .name-with-link {
             color: #93c5fd;
         }
+        
+        /* URL container styles */
+        .url-container {
+            display: flex;
+            flex-direction: column;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-r from-green-500 to-green-700">
@@ -323,16 +329,16 @@
             newRow.innerHTML = `
                 <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 text-center">${rowNumber}</td>
                 <td class="px-4 py-3 whitespace-nowrap text-center">
-                    <div class="name-input-container">
+                    <div class="url-container">
                         <input type="text" placeholder="Masukkan Nama" class="name-input" 
                                value="${timerData?.name || ''}">
-                        <input type="url" placeholder="URL (opsional)" class="url-input hidden" 
+                        <input type="url" placeholder="URL (opsional)" class="url-input ${timerData?.url ? 'hidden' : ''}" 
                                value="${timerData?.url || ''}">
                         ${timerData?.url ? 
-                            `<span class="name-display hidden">
+                            `<div class="name-display">
                                 <span class="name-with-link" data-url="${timerData.url}">${timerData.name || 'Tanpa Nama'}</span>
                                 <span class="link-icon" title="Edit URL">✏️</span>
-                            </span>` : 
+                            </div>` : 
                             ''}
                     </div>
                 </td>
@@ -375,14 +381,6 @@
                 </td>
             `;
             
-            // Initialize display based on URL presence
-            if (timerData?.url) {
-                const container = newRow.querySelector('.name-input-container');
-                container.querySelector('.name-input').classList.add('hidden');
-                container.querySelector('.url-input').classList.add('hidden');
-                container.querySelector('.name-display').classList.remove('hidden');
-            }
-            
             return newRow;
         }
 
@@ -423,7 +421,7 @@
             const linkIcon = row.querySelector('.link-icon');
             const finishTimeBox = row.querySelector('.finish-time-box');
             const rowNumber = row.querySelector('td').textContent;
-            const nameInputContainer = row.querySelector('.name-input-container');
+            const urlContainer = row.querySelector('.url-container');
 
             // Initialize timer state
             timerStates[rowNumber] = {
@@ -451,36 +449,43 @@
                 const url = urlInput.value;
                 
                 if (url) {
+                    // Validate URL format
+                    let validUrl = url;
+                    if (!validUrl.startsWith('http://') && !validUrl.startsWith('https://')) {
+                        validUrl = 'https://' + validUrl;
+                        urlInput.value = validUrl;
+                    }
+                    
                     // Create or update name display with link
                     if (!nameDisplay) {
                         const displayHTML = `
-                            <span class="name-display">
-                                <span class="name-with-link" data-url="${url}">${name}</span>
+                            <div class="name-display">
+                                <span class="name-with-link" data-url="${validUrl}">${name}</span>
                                 <span class="link-icon" title="Edit URL">✏️</span>
-                            </span>
+                            </div>
                         `;
-                        nameInputContainer.insertAdjacentHTML('beforeend', displayHTML);
+                        urlContainer.insertAdjacentHTML('beforeend', displayHTML);
                         
                         // Add event listeners to new elements
-                        const newNameDisplay = nameInputContainer.querySelector('.name-display');
-                        const newNameWithLink = nameInputContainer.querySelector('.name-with-link');
-                        const newLinkIcon = nameInputContainer.querySelector('.link-icon');
+                        const newNameDisplay = urlContainer.querySelector('.name-display');
+                        const newNameWithLink = urlContainer.querySelector('.name-with-link');
+                        const newLinkIcon = urlContainer.querySelector('.link-icon');
                         
                         newNameWithLink.addEventListener('click', (e) => {
                             e.preventDefault();
-                            window.open(url, '_blank');
+                            window.open(newNameWithLink.dataset.url, '_blank');
                         });
                         
                         newLinkIcon.addEventListener('click', () => {
                             toggleNameInputMode(true);
                         });
+                        
+                        toggleNameInputMode(false);
                     } else {
                         const nameWithLink = nameDisplay.querySelector('.name-with-link');
                         nameWithLink.textContent = name;
-                        nameWithLink.dataset.url = url;
+                        nameWithLink.dataset.url = validUrl;
                     }
-                    
-                    toggleNameInputMode(false);
                 } else {
                     // No URL, just show name input
                     if (nameDisplay) nameDisplay.remove();
