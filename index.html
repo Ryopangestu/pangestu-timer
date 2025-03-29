@@ -175,7 +175,7 @@
             flex-direction: column;
         }
         
-        /* Table container styles - MODIFIED */
+        /* Table container styles */
         .table-container {
             width: 100%;
             position: relative;
@@ -202,13 +202,86 @@
         
         .table-header th {
             position: sticky;
-            top: 6.5rem; /* Adjust based on total header height */
+            top: 6.5rem;
             z-index: 20;
             background-color: #f3f4f6;
         }
         
         .dark .table-header th {
             background-color: #111827;
+        }
+        
+        /* Notification table styles */
+        .notification-container {
+            margin-top: 2rem;
+            overflow-x: auto;
+            width: 100%;
+        }
+        
+        .notification-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #111827;
+        }
+        
+        .dark .notification-title {
+            color: #f3f4f6;
+        }
+        
+        .notification-table {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            overflow-x: auto;
+            min-height: 60px;
+        }
+        
+        .notification-box {
+            border: 2px solid #ef4444;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            display: inline-flex;
+            align-items: center;
+            white-space: nowrap;
+            background-color: #fee2e2;
+            color: #b91c1c;
+            font-weight: bold;
+            height: fit-content;
+            animation: fadeIn 0.5s ease-in-out;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .dark .notification-box {
+            border-color: #fca5a5;
+            background-color: #7f1d1d;
+            color: #fecaca;
+        }
+        
+        .notification-box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+        
+        .dark .notification-box:hover {
+            box-shadow: 0 0 5px rgba(255,255,255,0.2);
+        }
+        
+        .notification-box.new {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
         
         /* Responsive table for mobile */
@@ -220,14 +293,14 @@
             }
             
             .table-header th {
-                top: 8rem; /* Larger offset for mobile */
+                top: 8rem;
             }
         }
     </style>
 </head>
 <body class="bg-gradient-to-r from-green-500 to-green-700">
     <div class="main-container bg-white rounded-lg shadow-lg p-4 mx-auto my-4 w-full max-w-7xl">
-        <!-- Modified table container with all sticky headers -->
+        <!-- Table container -->
         <div class="table-container">
             <!-- Sticky header group -->
             <div class="sticky-header-group">
@@ -260,6 +333,14 @@
                     <!-- Rows will be added dynamically -->
                 </tbody>
             </table>
+        </div>
+
+        <!-- Notification Table -->
+        <div class="notification-container">
+            <div class="notification-title">Timer yang Telah Berhenti:</div>
+            <div class="notification-table" id="notification-table">
+                <!-- Notification boxes will be added here -->
+            </div>
         </div>
 
         <div class="text-center mb-4">
@@ -373,6 +454,49 @@
         function listenForTimerChanges(callback) {
             database.ref('timers').on('value', (snapshot) => {
                 callback(snapshot.val() || {});
+            });
+        }
+
+        function addNotification(rowNumber, name) {
+            const notificationTable = document.getElementById('notification-table');
+            const notificationBox = document.createElement('div');
+            notificationBox.className = 'notification-box new';
+            notificationBox.textContent = `#${rowNumber}(${name || 'Tanpa Nama'})`;
+            notificationBox.title = `Timer #${rowNumber} (${name || 'Tanpa Nama'}) telah berhenti`;
+            notificationBox.dataset.rowNumber = rowNumber;
+            
+            notificationTable.appendChild(notificationBox);
+            
+            // Remove 'new' class after animation
+            setTimeout(() => {
+                notificationBox.classList.remove('new');
+            }, 2000);
+            
+            // Auto-scroll to the right
+            notificationTable.scrollLeft = notificationTable.scrollWidth;
+            
+            // Click to focus on the timer row
+            notificationBox.addEventListener('click', () => {
+                const row = document.querySelector(`#timer-table tbody tr:nth-child(${rowNumber})`);
+                if (row) {
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    row.animate([
+                        { backgroundColor: 'rgba(239, 68, 68, 0.3)' },
+                        { backgroundColor: 'transparent' }
+                    ], {
+                        duration: 2000,
+                        iterations: 1
+                    });
+                }
+            });
+        }
+
+        function removeNotification(rowNumber) {
+            const notificationBoxes = document.querySelectorAll('.notification-box');
+            notificationBoxes.forEach(box => {
+                if (box.dataset.rowNumber === rowNumber.toString()) {
+                    box.remove();
+                }
             });
         }
 
@@ -555,6 +679,8 @@
             }
 
             function startTimer() {
+                removeNotification(rowNumber);
+                
                 if (timerStates[rowNumber].isRunning) return;
 
                 let totalSeconds = timerStates[rowNumber].remainingSeconds;
@@ -633,6 +759,7 @@
 
                         if (!shownNotifications.has(rowNumber)) {
                             shownNotifications.add(rowNumber);
+                            addNotification(rowNumber, nameInput.value);
                             showNotification(
                                 'Timer Selesai', 
                                 `Timer #${rowNumber} (${nameInput.value || 'Tanpa Nama'}) telah berhenti`, 
@@ -800,6 +927,8 @@
                 });
 
                 if (isConfirmed) {
+                    removeNotification(rowNumber);
+                    
                     if (activeIntervals[rowNumber]) {
                         clearInterval(activeIntervals[rowNumber]);
                         delete activeIntervals[rowNumber];
@@ -890,6 +1019,15 @@
                     shownNotifications.delete(oldRowNumber);
                     shownNotifications.add(newRowNumber);
                 }
+                
+                // Update notification row numbers
+                const notificationBoxes = document.querySelectorAll('.notification-box');
+                notificationBoxes.forEach(box => {
+                    if (box.dataset.rowNumber === oldRowNumber) {
+                        box.dataset.rowNumber = newRowNumber;
+                        box.textContent = box.textContent.replace(`#${oldRowNumber}`, `#${newRowNumber}`);
+                    }
+                });
             });
         }
 
@@ -1028,6 +1166,7 @@
 
                                     if (!shownNotifications.has(rowNumber)) {
                                         shownNotifications.add(rowNumber);
+                                        addNotification(rowNumber, timerData.name);
                                         showNotification(
                                             'Timer Selesai', 
                                             `Timer #${rowNumber} (${timerData.name || 'Tanpa Nama'}) telah berhenti`, 
