@@ -12,25 +12,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
     <style>
-        /* Background styles */
-        body {
-            background: linear-gradient(135deg, #00008b, #4b0082);
-            min-height: 100vh;
-            margin: 0;
-            padding: 1rem;
-            color: #f3f4f6;
-        }
-        
-        .main-container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        
-        .dark .main-container {
-            background: rgba(31, 41, 55, 0.95);
-        }
-        
         .btn:active {
             transform: scale(0.95);
         }
@@ -142,12 +123,28 @@
             color: #93c5fd;
         }
         
-        /* Dark mode toggle styles */
-        .dark-mode-toggle {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            z-index: 50;
+        /* Dark mode styles */
+        .dark {
+            background-color: #111827;
+            color: #f3f4f6;
+        }
+        .dark .main-container {
+            background-color: #1f2937;
+            color: #f3f4f6;
+        }
+        .dark .sticky-header {
+            background-color: #111827;
+        }
+        .dark .btn {
+            color: #f3f4f6;
+        }
+        .dark .converter-container {
+            background-color: #1f2937;
+        }
+        .dark .time-input {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #f3f4f6;
         }
         
         /* Daily Check-in 24 jam styles */
@@ -295,6 +292,30 @@
             100% { transform: scale(1); }
         }
         
+        /* Dark mode toggle button */
+        .dark-mode-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #1f2937;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            border: none;
+        }
+        
+        .dark .dark-mode-toggle {
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        
         /* Responsive table for mobile */
         @media (max-width: 768px) {
             table {
@@ -309,8 +330,8 @@
         }
     </style>
 </head>
-<body>
-    <div class="main-container p-4 mx-auto my-4 w-full max-w-7xl">
+<body class="bg-gradient-to-r from-green-500 to-green-700">
+    <div class="main-container bg-white rounded-lg shadow-lg p-4 mx-auto my-4 w-full max-w-7xl">
         <!-- Table container -->
         <div class="table-container">
             <!-- Sticky header group -->
@@ -364,7 +385,7 @@
             <div class="converter-title text-lg font-bold mb-2">Konverter Waktu WIB ⇄ UTC</div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Waktu WIB</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Waktu WIB</label>
                     <input type="time" id="wib-time" class="time-input border border-gray-300 rounded px-3 py-2 w-full" step="1">
                     <button id="wib-to-utc" class="converter-btn bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded w-full mt-1 transition duration-200">
                         WIB → UTC
@@ -374,18 +395,28 @@
                     <div class="text-2xl font-bold mt-6">⇄</div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Waktu UTC</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Waktu UTC</label>
                     <input type="time" id="utc-time" class="time-input border border-gray-300 rounded px-3 py-2 w-full" step="1">
                     <button id="utc-to-wib" class="converter-btn bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded w-full mt-1 transition duration-200">
                         UTC → WIB
                     </button>
                 </div>
             </div>
-            <div class="mt-2 text-sm text-gray-500">
+            <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 * WIB (Waktu Indonesia Barat) = UTC+7
             </div>
         </div>
     </div>
+    
+    <!-- Dark mode toggle button -->
+    <button id="dark-mode-toggle" class="dark-mode-toggle" title="Toggle Dark Mode">
+        <svg id="dark-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg id="light-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+    </button>
     
     <script>
         const firebaseConfig = {
@@ -405,6 +436,46 @@
         const activeIntervals = {};
         const shownNotifications = new Set();
         const timerStates = {};
+
+        // Dark mode functions
+        function enableDarkMode() {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('darkMode', 'enabled');
+            document.getElementById('dark-icon').classList.add('hidden');
+            document.getElementById('light-icon').classList.remove('hidden');
+        }
+
+        function disableDarkMode() {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('darkMode', 'disabled');
+            document.getElementById('dark-icon').classList.remove('hidden');
+            document.getElementById('light-icon').classList.add('hidden');
+        }
+
+        function toggleDarkMode() {
+            if (document.documentElement.classList.contains('dark')) {
+                disableDarkMode();
+            } else {
+                enableDarkMode();
+            }
+        }
+
+        // Check for saved dark mode preference
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            enableDarkMode();
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            // Check system preference if no localStorage setting
+            enableDarkMode();
+        }
+
+        // Listen for system color scheme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (e.matches) {
+                enableDarkMode();
+            } else {
+                disableDarkMode();
+            }
+        });
 
         function showNotification(title, message, icon = 'info', timer = 3000) {
             return Swal.fire({
@@ -514,7 +585,7 @@
         function createNewRow(rowNumber, timerData = null) {
             const newRow = document.createElement('tr');
             newRow.innerHTML = `
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 text-center">${rowNumber}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100 text-center">${rowNumber}</td>
                 <td class="px-4 py-3 whitespace-nowrap text-center">
                     <div class="url-container">
                         <input type="text" placeholder="Masukkan Nama" class="name-input" 
@@ -530,7 +601,7 @@
                     </div>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-center">
-                    <input type="time" step="1" class="border border-gray-300 rounded px-2 py-1 w-full timer-input bg-transparent" 
+                    <input type="time" step="1" class="border border-gray-300 rounded px-2 py-1 w-full timer-input" 
                            value="${timerData?.timerInputValue || '24:00:00'}">
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-center">
@@ -544,25 +615,25 @@
                     </div>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-center">
-                    <button class="bg-white border border-gray-300 rounded px-2 py-1 start-btn btn w-full
+                    <button class="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 start-btn btn w-full
                                  ${timerData?.startDisabled ? 'bg-green-500 text-white' : ''}" 
                             ${timerData?.startDisabled ? 'disabled' : ''}>
                         Mulai
                     </button>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-center">
-                    <button class="bg-gray-200 border border-gray-300 rounded px-2 py-1 stop-btn btn w-full" 
+                    <button class="bg-gray-200 dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded px-2 py-1 stop-btn btn w-full" 
                             ${timerData?.stopDisabled ? 'disabled' : ''}>
                         Stop
                     </button>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-center">
-                    <button class="bg-yellow-500 text-white border border-gray-300 rounded px-2 py-1 restart-btn btn w-full">
+                    <button class="bg-yellow-500 text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1 restart-btn btn w-full">
                         Restart
                     </button>
                 </td>
                 <td class="px-4 py-3 whitespace-nowrap text-center">
-                    <button class="bg-red-500 text-white border border-gray-300 rounded px-2 py-1 delete-btn btn w-full">
+                    <button class="bg-red-500 text-white border border-gray-300 dark:border-gray-600 rounded px-2 py-1 delete-btn btn w-full">
                         Hapus
                     </button>
                 </td>
@@ -1115,6 +1186,9 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Add dark mode toggle event listener
+            document.getElementById('dark-mode-toggle').addEventListener('click', toggleDarkMode);
+            
             listenForTimerChanges((timers) => {
                 const tableBody = document.querySelector('#timer-table tbody');
                 tableBody.innerHTML = '';
