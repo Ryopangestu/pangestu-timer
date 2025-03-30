@@ -367,7 +367,7 @@
         const BOT_TOKEN = '7806238605:AAEFrEheDskriUo3ePNfvdiyYCtPa5Mbvw0';
         const CHAT_ID = '840076617';
         const WEBSITE_URL = 'https://pangestu-timer.web.app';
-        const NOTIFICATION_DEBOUNCE_TIME = 2000; // 2 detik
+        const NOTIFICATION_DEBOUNCE_TIME = 2000;
 
         // ================= INITIALIZATION =================
         const app = firebase.initializeApp(firebaseConfig);
@@ -434,7 +434,6 @@
 
         // ================= TIMER COMPLETION HANDLER =================
         async function handleTimerCompletion(rowNumber, nameInput, finishTimeFormatted) {
-            // Clear any pending debounce
             if (notificationDebouncers[rowNumber]) {
                 clearTimeout(notificationDebouncers[rowNumber]);
                 delete notificationDebouncers[rowNumber];
@@ -445,13 +444,11 @@
                     try {
                         console.log(`[Handler] Memproses completion untuk #${rowNumber}`);
                         
-                        // Pastikan timer benar-benar selesai
                         if (timerStates[rowNumber]?.isRunning || timerStates[rowNumber]?.remainingSeconds > 0) {
                             console.log(`[Handler] Timer #${rowNumber} masih berjalan, abort`);
                             return resolve(false);
                         }
 
-                        // Atomic check dari Firebase
                         const timerRef = database.ref('timers/' + rowNumber);
                         const snapshot = await timerRef.once('value');
                         const timerData = snapshot.val();
@@ -475,7 +472,6 @@
                         );
 
                         if (telegramSuccess) {
-                            // Update status di Firebase dan lokal
                             await timerRef.update({
                                 hasNotified: true,
                                 isRunning: false,
@@ -493,7 +489,6 @@
                             
                             shownNotifications.add(rowNumber);
                             
-                            // Tampilkan notifikasi lokal
                             addNotification(rowNumber, nameInput.value);
                             showNotification(
                                 'Timer Selesai', 
@@ -597,7 +592,6 @@
                         const timers = snapshot.val() || {};
                         console.log('[Firebase] Data timer diperbarui');
                         
-                        // Sync notifikasi yang sudah dikirim
                         Object.entries(timers).forEach(([rowNumber, timerData]) => {
                             if (timerData.hasNotified) {
                                 shownNotifications.add(rowNumber);
@@ -618,7 +612,6 @@
 
         // ================= NOTIFICATION FUNCTIONS =================
         function addNotification(rowNumber, name) {
-            // Hapus notifikasi lama jika ada
             removeNotification(rowNumber);
             
             const notificationTable = document.getElementById('notification-table');
@@ -982,11 +975,6 @@
                 startButton.classList.remove('bg-green-500', 'text-white');
                 stopButton.disabled = true;
 
-                await saveTimerToFirebase(rowNumber, {
-                    name: nameInput.value,
-                    url: urlInput.value,
-                    timer: timerDisplay.textContent,
-                    startDisabled: false
                 await saveTimerToFirebase(rowNumber, {
                     name: nameInput.value,
                     url: urlInput.value,
