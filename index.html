@@ -367,7 +367,7 @@
         const BOT_TOKEN = '7806238605:AAEFrEheDskriUo3ePNfvdiyYCtPa5Mbvw0';
         const CHAT_ID = '840076617';
         const NOTIFICATION_DEBOUNCE_TIME = 2000; // 2 detik
-        const DASHBOARD_URL = 'https://yourdashboard.com'; // Ganti dengan URL dashboard Anda
+        const DASHBOARD_URL = 'https://ryopangestu.github.io/pangestu-timer'; // Ganti dengan URL dashboard Anda
 
         // ================= INITIALIZATION =================
         const app = firebase.initializeApp(firebaseConfig);
@@ -398,7 +398,7 @@
             const message = `
 ⏰ <b>TIMER SELESAI</b> ⏰
 ━━━━━━━━━━━━━━━━━━━━
-🆔 <b>ID:</b> <code>#${rowNumber}</code>
+🆔 <b>No:</b> <code>#${rowNumber}</code>
 📛 <b>Nama:</b> <code>${timerName || 'Tanpa Nama'}</code>
 ⏱ <b>Selesai:</b> <code>${timeString}</code> (<code>${cleanTimeOfDay}</code>)
 ━━━━━━━━━━━━━━━━━━━━
