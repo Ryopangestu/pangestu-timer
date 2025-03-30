@@ -367,6 +367,7 @@
         const BOT_TOKEN = '7806238605:AAEFrEheDskriUo3ePNfvdiyYCtPa5Mbvw0';
         const CHAT_ID = '840076617';
         const NOTIFICATION_DEBOUNCE_TIME = 2000; // 2 detik
+        const DASHBOARD_URL = 'https://yourdashboard.com'; // Ganti dengan URL dashboard Anda
 
         // ================= INITIALIZATION =================
         const app = firebase.initializeApp(firebaseConfig);
@@ -380,14 +381,31 @@
         async function sendTelegramNotification(rowNumber, timerName, finishTime) {
             console.log(`[Telegram] Mengirim notifikasi untuk timer #${rowNumber}`);
             
+            // Format tanggal Indonesia (Rabu, 15 Maret 2023)
+            const now = new Date();
+            const dateOptions = { 
+                weekday: 'long', 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+            };
+            const formattedDate = now.toLocaleDateString('id-ID', dateOptions);
+            
+            // Pisahkan waktu dan keterangan waktu (pagi/siang/sore/malam)
+            const [timeString, timeOfDay] = finishTime.split(' ');
+            const cleanTimeOfDay = timeOfDay.replace(/[()]/g, '');
+            
             const message = `
-⏰ <b>TIMER SELESAI</b>
-━━━━━━━━━━━━
-• <b>No:</b> <code>#${rowNumber}</code>
-• <b>Nama:</b> <code>${timerName || 'Tanpa Nama'}</code>
-• <b>Selesai:</b> <code>${finishTime}</code>
-━━━━━━━━━━━━
-<i>${new Date().toLocaleString('id-ID')}</i>
+⏰ <b>TIMER SELESAI</b> ⏰
+━━━━━━━━━━━━━━━━━━━━
+🆔 <b>ID:</b> <code>#${rowNumber}</code>
+📛 <b>Nama:</b> <code>${timerName || 'Tanpa Nama'}</code>
+⏱ <b>Selesai:</b> <code>${timeString}</code> (<code>${cleanTimeOfDay}</code>)
+━━━━━━━━━━━━━━━━━━━━
+📅 ${formattedDate}
+
+🌐 <a href="${DASHBOARD_URL}">Lihat Dashboard Timer</a>
+🔗 <a href="${DASHBOARD_URL}/timer/${rowNumber}">Detail Timer #${rowNumber}</a>
             `;
 
             try {
