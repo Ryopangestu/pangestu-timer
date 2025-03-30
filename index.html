@@ -352,7 +352,7 @@
     </div>
     
     <script>
-        // ================= CONFIGURATION =================
+        // ================= CONFIGURASI =================
         const firebaseConfig = {
             apiKey: "AIzaSyDXjv3Yg8RJvxCrYYZvMjpEKSdxcshynTo",
             authDomain: "pangestu-timer.firebaseapp.com",
@@ -366,8 +366,7 @@
 
         const BOT_TOKEN = '7806238605:AAEFrEheDskriUo3ePNfvdiyYCtPa5Mbvw0';
         const CHAT_ID = '840076617';
-        const WEBSITE_URL = 'https://pangestu-timer.web.app';
-        const NOTIFICATION_DEBOUNCE_TIME = 2000;
+        const NOTIFICATION_DEBOUNCE_TIME = 2000; // 2 detik
 
         // ================= INITIALIZATION =================
         const app = firebase.initializeApp(firebaseConfig);
@@ -377,29 +376,18 @@
         const timerStates = {};
         const notificationDebouncers = {};
 
-        // ================= ENHANCED TELEGRAM NOTIFICATION =================
+        // ================= TELEGRAM NOTIFICATION =================
         async function sendTelegramNotification(rowNumber, timerName, finishTime) {
             console.log(`[Telegram] Mengirim notifikasi untuk timer #${rowNumber}`);
             
             const message = `
-⏰ <b>TIMER SELESAI</b> ⏰
-━━━━━━━━━━━━━━━━━━
-🆔 <b>No:</b> <code>#${rowNumber}</code>
-📛 <b>Nama:</b> <code>${timerName || 'Tanpa Nama'}</code>
-⏱ <b>Selesai:</b> <code>${finishTime}</code>
-━━━━━━━━━━━━━━━━━━
-📅 <i>${new Date().toLocaleString('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-})}</i>
-
-🌐 <a href="${WEBSITE_URL}">Lihat Dashboard Timer</a>
-🔗 <a href="${WEBSITE_URL}/timer/${rowNumber}">Detail Timer #${rowNumber}</a>
+⏰ <b>TIMER SELESAI</b>
+━━━━━━━━━━━━
+• <b>No:</b> <code>#${rowNumber}</code>
+• <b>Nama:</b> <code>${timerName || 'Tanpa Nama'}</code>
+• <b>Selesai:</b> <code>${finishTime}</code>
+━━━━━━━━━━━━
+<i>${new Date().toLocaleString('id-ID')}</i>
             `;
 
             try {
@@ -410,7 +398,7 @@
                         chat_id: CHAT_ID,
                         text: message,
                         parse_mode: 'HTML',
-                        disable_web_page_preview: false
+                        disable_web_page_preview: true
                     })
                 });
 
@@ -434,6 +422,7 @@
 
         // ================= TIMER COMPLETION HANDLER =================
         async function handleTimerCompletion(rowNumber, nameInput, finishTimeFormatted) {
+            // Clear any pending debounce
             if (notificationDebouncers[rowNumber]) {
                 clearTimeout(notificationDebouncers[rowNumber]);
                 delete notificationDebouncers[rowNumber];
@@ -444,11 +433,13 @@
                     try {
                         console.log(`[Handler] Memproses completion untuk #${rowNumber}`);
                         
+                        // Pastikan timer benar-benar selesai
                         if (timerStates[rowNumber]?.isRunning || timerStates[rowNumber]?.remainingSeconds > 0) {
                             console.log(`[Handler] Timer #${rowNumber} masih berjalan, abort`);
                             return resolve(false);
                         }
 
+                        // Atomic check dari Firebase
                         const timerRef = database.ref('timers/' + rowNumber);
                         const snapshot = await timerRef.once('value');
                         const timerData = snapshot.val();
@@ -472,6 +463,7 @@
                         );
 
                         if (telegramSuccess) {
+                            // Update status di Firebase dan lokal
                             await timerRef.update({
                                 hasNotified: true,
                                 isRunning: false,
@@ -489,6 +481,7 @@
                             
                             shownNotifications.add(rowNumber);
                             
+                            // Tampilkan notifikasi lokal
                             addNotification(rowNumber, nameInput.value);
                             showNotification(
                                 'Timer Selesai', 
@@ -592,6 +585,7 @@
                         const timers = snapshot.val() || {};
                         console.log('[Firebase] Data timer diperbarui');
                         
+                        // Sync notifikasi yang sudah dikirim
                         Object.entries(timers).forEach(([rowNumber, timerData]) => {
                             if (timerData.hasNotified) {
                                 shownNotifications.add(rowNumber);
@@ -612,6 +606,7 @@
 
         // ================= NOTIFICATION FUNCTIONS =================
         function addNotification(rowNumber, name) {
+            // Hapus notifikasi lama jika ada
             removeNotification(rowNumber);
             
             const notificationTable = document.getElementById('notification-table');
