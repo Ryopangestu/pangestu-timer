@@ -352,7 +352,7 @@
     </div>
     
     <script>
-        // ================= CONFIGURASI =================
+        // ================= CONFIGURATION =================
         const firebaseConfig = {
             apiKey: "AIzaSyDXjv3Yg8RJvxCrYYZvMjpEKSdxcshynTo",
             authDomain: "pangestu-timer.firebaseapp.com",
@@ -366,6 +366,7 @@
 
         const BOT_TOKEN = '7806238605:AAEFrEheDskriUo3ePNfvdiyYCtPa5Mbvw0';
         const CHAT_ID = '840076617';
+        const WEBSITE_URL = 'https://pangestu-timer.web.app';
         const NOTIFICATION_DEBOUNCE_TIME = 2000; // 2 detik
 
         // ================= INITIALIZATION =================
@@ -376,18 +377,29 @@
         const timerStates = {};
         const notificationDebouncers = {};
 
-        // ================= TELEGRAM NOTIFICATION =================
+        // ================= ENHANCED TELEGRAM NOTIFICATION =================
         async function sendTelegramNotification(rowNumber, timerName, finishTime) {
             console.log(`[Telegram] Mengirim notifikasi untuk timer #${rowNumber}`);
             
             const message = `
-⏰ <b>TIMER SELESAI</b>
-━━━━━━━━━━━━
-• <b>No:</b> <code>#${rowNumber}</code>
-• <b>Nama:</b> <code>${timerName || 'Tanpa Nama'}</code>
-• <b>Selesai:</b> <code>${finishTime}</code>
-━━━━━━━━━━━━
-<i>${new Date().toLocaleString('id-ID')}</i>
+⏰ <b>TIMER SELESAI</b> ⏰
+━━━━━━━━━━━━━━━━━━
+🆔 <b>No:</b> <code>#${rowNumber}</code>
+📛 <b>Nama:</b> <code>${timerName || 'Tanpa Nama'}</code>
+⏱ <b>Selesai:</b> <code>${finishTime}</code>
+━━━━━━━━━━━━━━━━━━
+📅 <i>${new Date().toLocaleString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+})}</i>
+
+🌐 <a href="${WEBSITE_URL}">Lihat Dashboard Timer</a>
+🔗 <a href="${WEBSITE_URL}/timer/${rowNumber}">Detail Timer #${rowNumber}</a>
             `;
 
             try {
@@ -398,7 +410,7 @@
                         chat_id: CHAT_ID,
                         text: message,
                         parse_mode: 'HTML',
-                        disable_web_page_preview: true
+                        disable_web_page_preview: false
                     })
                 });
 
@@ -970,6 +982,11 @@
                 startButton.classList.remove('bg-green-500', 'text-white');
                 stopButton.disabled = true;
 
+                await saveTimerToFirebase(rowNumber, {
+                    name: nameInput.value,
+                    url: urlInput.value,
+                    timer: timerDisplay.textContent,
+                    startDisabled: false
                 await saveTimerToFirebase(rowNumber, {
                     name: nameInput.value,
                     url: urlInput.value,
