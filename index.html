@@ -364,9 +364,9 @@
             measurementId: "G-0249BJFL8T"
         };
 
-        // TOKEN BOT DEMO UNTUK TESTING
         const BOT_TOKEN = '7806238605:AAEFrEheDskriUo3ePNfvdiyYCtPa5Mbvw0';
-        const CHAT_ID = '840076617'; // Chat ID Rio Pangestu
+        const CHAT_ID = '840076617';
+        const NOTIFICATION_DEBOUNCE_TIME = 2000; // 2 detik
 
         // ================= INITIALIZATION =================
         const app = firebase.initializeApp(firebaseConfig);
@@ -374,10 +374,11 @@
         const activeIntervals = {};
         const shownNotifications = new Set();
         const timerStates = {};
+        const notificationDebouncers = {};
 
         // ================= TELEGRAM NOTIFICATION =================
         async function sendTelegramNotification(rowNumber, timerName, finishTime) {
-            console.log("Mengirim notifikasi Telegram...");
+            console.log(`[Telegram] Mengirim notifikasi untuk timer #${rowNumber}`);
             
             const message = `
 ⏰ <b>TIMER SELESAI</b>
@@ -401,47 +402,104 @@
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
                 if (!data.ok) {
-                    console.error('Error dari Telegram API:', data);
+                    console.error('[Telegram] Error dari API:', data);
                     return false;
                 }
+
+                console.log(`[Telegram] Notifikasi untuk #${rowNumber} berhasil dikirim`);
                 return true;
             } catch (error) {
-                console.error('Gagal mengirim notifikasi Telegram:', error);
+                console.error('[Telegram] Gagal mengirim notifikasi:', error);
                 return false;
             }
         }
 
-        // ================= TIMER FUNCTIONS =================
+        // ================= TIMER COMPLETION HANDLER =================
         async function handleTimerCompletion(rowNumber, nameInput, finishTimeFormatted) {
-            if (!timerStates[rowNumber]?.hasNotified) {
-                timerStates[rowNumber].hasNotified = true;
-                
-                const telegramSuccess = await sendTelegramNotification(
-                    rowNumber,
-                    nameInput.value,
-                    finishTimeFormatted
-                );
-                
-                if (telegramSuccess) {
-                    console.log(`Notifikasi Telegram untuk timer #${rowNumber} berhasil dikirim`);
-                }
-                
-                await saveTimerToFirebase(rowNumber, {
-                    hasNotified: true
-                });
+            // Clear any pending debounce
+            if (notificationDebouncers[rowNumber]) {
+                clearTimeout(notificationDebouncers[rowNumber]);
+                delete notificationDebouncers[rowNumber];
             }
-            
-            if (!shownNotifications.has(rowNumber)) {
-                shownNotifications.add(rowNumber);
-                addNotification(rowNumber, nameInput.value);
-                showNotification(
-                    'Timer Selesai', 
-                    `Timer #${rowNumber} (${nameInput.value || 'Tanpa Nama'}) telah berhenti`, 
-                    'info'
-                );
-            }
+
+            return new Promise((resolve) => {
+                notificationDebouncers[rowNumber] = setTimeout(async () => {
+                    try {
+                        console.log(`[Handler] Memproses completion untuk #${rowNumber}`);
+                        
+                        // Pastikan timer benar-benar selesai
+                        if (timerStates[rowNumber]?.isRunning || timerStates[rowNumber]?.remainingSeconds > 0) {
+                            console.log(`[Handler] Timer #${rowNumber} masih berjalan, abort`);
+                            return resolve(false);
+                        }
+
+                        // Atomic check dari Firebase
+                        const timerRef = database.ref('timers/' + rowNumber);
+                        const snapshot = await timerRef.once('value');
+                        const timerData = snapshot.val();
+
+                        if (!timerData) {
+                            console.log(`[Handler] Data timer #${rowNumber} tidak ditemukan`);
+                            return resolve(false);
+                        }
+
+                        if (timerData.hasNotified) {
+                            console.log(`[Handler] Notifikasi untuk #${rowNumber} sudah dikirim`);
+                            shownNotifications.add(rowNumber);
+                            return resolve(false);
+                        }
+
+                        console.log(`[Handler] Mencoba mengirim notifikasi untuk #${rowNumber}`);
+                        const telegramSuccess = await sendTelegramNotification(
+                            rowNumber,
+                            nameInput.value,
+                            finishTimeFormatted
+                        );
+
+                        if (telegramSuccess) {
+                            // Update status di Firebase dan lokal
+                            await timerRef.update({
+                                hasNotified: true,
+                                isRunning: false,
+                                remainingSeconds: 0,
+                                finishTime: null
+                            });
+                            
+                            timerStates[rowNumber] = {
+                                ...timerStates[rowNumber],
+                                hasNotified: true,
+                                isRunning: false,
+                                remainingSeconds: 0,
+                                finishTime: null
+                            };
+                            
+                            shownNotifications.add(rowNumber);
+                            
+                            // Tampilkan notifikasi lokal
+                            addNotification(rowNumber, nameInput.value);
+                            showNotification(
+                                'Timer Selesai', 
+                                `Timer #${rowNumber} (${nameInput.value || 'Tanpa Nama'}) telah berhenti`, 
+                                'info'
+                            );
+                            
+                            console.log(`[Handler] Proses completion untuk #${rowNumber} selesai`);
+                            return resolve(true);
+                        }
+                    } catch (error) {
+                        console.error(`[Handler] Error processing completion for #${rowNumber}:`, error);
+                        return resolve(false);
+                    } finally {
+                        delete notificationDebouncers[rowNumber];
+                    }
+                }, NOTIFICATION_DEBOUNCE_TIME);
+            });
         }
 
         // ================= UTILITY FUNCTIONS =================
@@ -495,30 +553,62 @@
 
         // ================= FIREBASE FUNCTIONS =================
         async function saveTimerToFirebase(timerId, data) {
-            return database.ref('timers/' + timerId).update(data);
+            try {
+                await database.ref('timers/' + timerId).update(data);
+                console.log(`[Firebase] Data timer #${timerId} berhasil disimpan`);
+                return true;
+            } catch (error) {
+                console.error(`[Firebase] Gagal menyimpan data timer #${timerId}:`, error);
+                return false;
+            }
         }
 
         async function deleteTimerFromFirebase(timerId) {
-            shownNotifications.delete(timerId.toString());
-            return database.ref('timers/' + timerId).remove();
+            try {
+                shownNotifications.delete(timerId.toString());
+                await database.ref('timers/' + timerId).remove();
+                console.log(`[Firebase] Timer #${timerId} berhasil dihapus`);
+                return true;
+            } catch (error) {
+                console.error(`[Firebase] Gagal menghapus timer #${timerId}:`, error);
+                return false;
+            }
         }
 
         function listenForTimerChanges(callback) {
-            database.ref('timers').on('value', (snapshot) => {
-                const timers = snapshot.val() || {};
-                
-                Object.entries(timers).forEach(([rowNumber, timerData]) => {
-                    if (timerData.hasNotified) {
-                        shownNotifications.add(rowNumber);
+            let debounceTimer;
+            
+            const handler = (snapshot) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    try {
+                        const timers = snapshot.val() || {};
+                        console.log('[Firebase] Data timer diperbarui');
+                        
+                        // Sync notifikasi yang sudah dikirim
+                        Object.entries(timers).forEach(([rowNumber, timerData]) => {
+                            if (timerData.hasNotified) {
+                                shownNotifications.add(rowNumber);
+                            }
+                        });
+                        
+                        callback(timers);
+                    } catch (error) {
+                        console.error('[Firebase] Error dalam listener:', error);
                     }
-                });
-                
-                callback(timers);
-            });
+                }, 500);
+            };
+            
+            database.ref('timers').on('value', handler);
+            
+            return () => database.ref('timers').off('value', handler);
         }
 
         // ================= NOTIFICATION FUNCTIONS =================
         function addNotification(rowNumber, name) {
+            // Hapus notifikasi lama jika ada
+            removeNotification(rowNumber);
+            
             const notificationTable = document.getElementById('notification-table');
             const notificationBox = document.createElement('div');
             notificationBox.className = 'notification-box new';
@@ -659,6 +749,7 @@
             const rowNumber = row.querySelector('td').textContent;
             const urlContainer = row.querySelector('.url-container');
 
+            // Initialize timer state
             timerStates[rowNumber] = {
                 isRunning: false,
                 remainingSeconds: 0,
@@ -666,6 +757,7 @@
                 hasNotified: false
             };
 
+            // Name input toggle
             function toggleNameInputMode(showInput) {
                 if (showInput) {
                     nameInput.classList.remove('hidden');
@@ -678,6 +770,7 @@
                 }
             }
 
+            // Update name display
             function updateNameDisplay() {
                 const name = nameInput.value || 'Tanpa Nama';
                 const url = urlInput.value;
@@ -723,6 +816,7 @@
                 }
             }
 
+            // Setup name with link
             if (nameWithLink) {
                 nameWithLink.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -738,6 +832,7 @@
                 toggleNameInputMode(false);
             }
 
+            // Timer functions
             async function startTimer() {
                 removeNotification(rowNumber);
                 
@@ -780,6 +875,7 @@
 
                 if (activeIntervals[rowNumber]) {
                     clearInterval(activeIntervals[rowNumber]);
+                    delete activeIntervals[rowNumber];
                 }
 
                 timerStates[rowNumber] = {
@@ -807,11 +903,8 @@
                             name: nameInput.value,
                             url: urlInput.value,
                             timer: '00:00:00',
-                            timerInputValue: timerInput.value,
                             startDisabled: false,
                             stopDisabled: true,
-                            restartDisabled: false,
-                            timerVisible: false,
                             isRunning: false,
                             remainingSeconds: 0,
                             finishTime: null
@@ -831,18 +924,10 @@
                     timerDisplay.textContent = `${h}:${m}:${s}`;
                     
                     await saveTimerToFirebase(rowNumber, {
-                        name: nameInput.value,
-                        url: urlInput.value,
                         timer: timerDisplay.textContent,
-                        timerInputValue: timerInput.value,
-                        startDisabled: true,
-                        stopDisabled: false,
-                        restartDisabled: false,
-                        timerVisible: true,
                         remainingSeconds: timerStates[rowNumber].remainingSeconds,
                         isRunning: true,
-                        timestamp: firebase.database.ServerValue.TIMESTAMP,
-                        finishTime: finishTime.getTime()
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
                     });
                 }, 1000);
 
@@ -857,7 +942,6 @@
                     timerInputValue: timerInput.value,
                     startDisabled: true,
                     stopDisabled: false,
-                    restartDisabled: false,
                     timerVisible: true,
                     remainingSeconds: totalSeconds,
                     isRunning: true,
@@ -890,12 +974,8 @@
                     name: nameInput.value,
                     url: urlInput.value,
                     timer: timerDisplay.textContent,
-                    timerInputValue: timerInput.value,
                     startDisabled: false,
                     stopDisabled: true,
-                    restartDisabled: false,
-                    timerVisible: true,
-                    remainingSeconds: timerStates[rowNumber].remainingSeconds,
                     isRunning: false,
                     timestamp: firebase.database.ServerValue.TIMESTAMP,
                     finishTime: timerStates[rowNumber].finishTime ? timerStates[rowNumber].finishTime.getTime() : null
@@ -913,6 +993,7 @@
                     await stopTimer();
                 }
                 
+                // Reset status notifikasi
                 timerStates[rowNumber].hasNotified = false;
                 shownNotifications.delete(rowNumber);
                 
@@ -951,7 +1032,6 @@
                     timerInputValue: timerInput.value,
                     startDisabled: false,
                     stopDisabled: true,
-                    restartDisabled: false,
                     timerVisible: true,
                     remainingSeconds: totalSeconds,
                     isRunning: false,
@@ -966,6 +1046,7 @@
                 );
             }
 
+            // Event listeners
             startButton.addEventListener('click', startTimer);
             stopButton.addEventListener('click', stopTimer);
             restartButton.addEventListener('click', restartTimer);
@@ -1135,6 +1216,7 @@
 
         // ================= INITIALIZATION =================
         document.addEventListener('DOMContentLoaded', function() {
+            // Periksa token bot
             if (!BOT_TOKEN || BOT_TOKEN.includes('TOKEN_BOT_ANDA')) {
                 console.error("Token bot belum dikonfigurasi dengan benar");
                 showNotification(
@@ -1145,15 +1227,10 @@
                 );
             } else {
                 console.log("Token bot terdeteksi:", BOT_TOKEN.substring(0, 6) + "...");
-                showNotification(
-                    'Bot Telegram Siap', 
-                    'Notifikasi Telegram aktif menggunakan bot demo', 
-                    'success',
-                    3000
-                );
             }
 
-            listenForTimerChanges((timers) => {
+            // Setup Firebase listener
+            const unsubscribe = listenForTimerChanges((timers) => {
                 const tableBody = document.querySelector('#timer-table tbody');
                 tableBody.innerHTML = '';
                 
@@ -1198,14 +1275,6 @@
                                     timerStates[rowNumber].remainingSeconds = 0;
                                     
                                     await saveTimerToFirebase(rowNumber, {
-                                        name: timerData.name,
-                                        url: timerData.url,
-                                        timer: '00:00:00',
-                                        timerInputValue: timerData.timerInputValue,
-                                        startDisabled: false,
-                                        stopDisabled: true,
-                                        restartDisabled: false,
-                                        timerVisible: false,
                                         isRunning: false,
                                         remainingSeconds: 0,
                                         finishTime: null
@@ -1268,10 +1337,12 @@
                 }
             });
 
+            // Setup event listeners
             document.getElementById('add-row-btn').addEventListener('click', addNewRow);
             document.getElementById('wib-to-utc').addEventListener('click', convertWIBtoUTC);
             document.getElementById('utc-to-wib').addEventListener('click', convertUTCtoWIB);
             
+            // Set waktu awal
             const now = new Date();
             const wibTimeInput = document.getElementById('wib-time');
             wibTimeInput.value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
@@ -1279,6 +1350,12 @@
             
             updateDateTime();
             setInterval(updateDateTime, 1000);
+
+            // Cleanup saat halaman ditutup
+            window.addEventListener('beforeunload', () => {
+                unsubscribe();
+                Object.values(activeIntervals).forEach(interval => clearInterval(interval));
+            });
         });
     </script>
 </body>
