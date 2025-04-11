@@ -2950,16 +2950,25 @@
         let tagsDisplay = '';
         if (airdrop.tags && airdrop.tags.length > 0) {
           tagsDisplay = `
-            <div class="tag-container">
+            <div class="tag-container" style="margin: 10px 0; display: flex; flex-wrap: wrap; gap: 5px;">
               ${airdrop.tags.map(tag => `
-                <span class="tag" style="background:${airdrop.tagColors?.[tag] || getDefaultTagColor(tag)}">
+                <span class="tag" style="
+                background: ${airdrop.tagColors?.[tag] || getDefaultTagColor(tag)};
+                color: white;
+                 padding: 4px 10px;
+                border-radius: 15px;
+                 font-size: 0.75rem;
+                display: inline-flex;
+                 align-items: center;
+                 gap: 5px;
+             ">
                   ${tag}
                 </span>
               `).join('')}
             </div>
           `;
         }
-        
+
         // Deadline info
         let deadlineInfo = '';
         if (airdrop.deadline) {
