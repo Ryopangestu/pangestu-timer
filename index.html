@@ -35,6 +35,9 @@
       --in-progress: #4361ee;
       --completed: #38b000;
       
+      /* Tag Colors */
+      --tag-preset-colors: #4361ee, #4895ef, #4cc9f0, #f72585, #b5179e, #7209b7, #3a5a40, #588157, #a3b18a;
+      
       /* Shadows */
       --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
       --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
@@ -963,6 +966,169 @@
       color: var(--primary);
     }
 
+    /* Deadline input styling */
+    .airdrop-meta-item.deadline-warning {
+      color: var(--warning);
+      font-weight: 600;
+    }
+
+    .airdrop-meta-item.deadline-urgent {
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    /* TAG STYLES */
+    .tag-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin: 8px 0;
+    }
+
+    .tag {
+      background: var(--primary-light);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 15px;
+      font-size: 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .tag:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .tag-remove {
+      cursor: pointer;
+      font-size: 0.7rem;
+      margin-left: 3px;
+    }
+
+    /* TAG INPUT */
+    .tag-input-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: center;
+      border: 1px solid var(--gray-light);
+      padding: 8px;
+      border-radius: 8px;
+      min-height: 42px;
+    }
+
+    .tag-input {
+      border: none;
+      outline: none;
+      flex-grow: 1;
+      min-width: 100px;
+    }
+
+    /* COLOR PICKER */
+    .tag-color-control {
+      display: flex;
+      align-items: center;
+      margin: 5px 0;
+      gap: 10px;
+      padding: 5px;
+      border-radius: 5px;
+    }
+
+    .tag-color-control.active {
+      background: rgba(67, 97, 238, 0.1);
+    }
+
+    .tag-preview {
+      padding: 4px 12px;
+      border-radius: 15px;
+      color: white;
+      font-size: 0.8rem;
+      min-width: 80px;
+      display: inline-block;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    input[type="color"] {
+      width: 40px;
+      height: 30px;
+      cursor: pointer;
+      border: 1px solid var(--gray-light);
+      border-radius: 4px;
+    }
+
+    /* COLOR PALETTE */
+    .tag-palette {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px;
+      background: var(--gray-light);
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
+    .tag-preset-color {
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      display: inline-block;
+      margin: 3px;
+      cursor: pointer;
+      border: 2px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+
+    .tag-preset-color:hover {
+      transform: scale(1.1);
+    }
+
+    /* COLOR GROUPS */
+    .color-group-selector {
+      margin-top: 15px;
+      padding: 10px;
+      background: var(--gray-light);
+      border-radius: 8px;
+    }
+
+    .color-groups {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .color-group {
+      cursor: pointer;
+      text-align: center;
+      padding: 5px;
+      border-radius: 5px;
+    }
+
+    .color-group:hover {
+      background: rgba(0,0,0,0.05);
+    }
+
+    .color-group > div {
+      width: 20px;
+      height: 20px;
+      display: inline-block;
+      border-radius: 50%;
+      margin: 2px;
+      border: 1px solid white;
+    }
+
+    .color-group > span {
+      display: block;
+      font-size: 0.7rem;
+      margin-top: 3px;
+    }
+
     /* Responsive Adjustments */
     @media (max-width: 1200px) {
       .container {
@@ -1256,6 +1422,17 @@
           <input type="date" id="airdropDate" required>
         </div>
         
+        <!-- Deadline Input Fields -->
+        <div class="form-group">
+          <label for="airdropDeadlineDate"><i class="fas fa-hourglass-end"></i> Deadline Tanggal</label>
+          <input type="date" id="airdropDeadlineDate">
+        </div>
+        
+        <div class="form-group">
+          <label for="airdropDeadlineTime"><i class="fas fa-clock"></i> Deadline Waktu</label>
+          <input type="time" id="airdropDeadlineTime" value="23:59">
+        </div>
+        
         <div class="form-group">
           <label for="airdropStatus"><i class="fas fa-circle-check"></i> Status*</label>
           <select id="airdropStatus" required>
@@ -1281,6 +1458,26 @@
         <div class="form-group">
           <label for="airdropLink"><i class="fas fa-link"></i> Link/Tutorial</label>
           <input type="text" id="airdropLink" placeholder="URL lengkap">
+        </div>
+
+        <!-- Tag Input Section -->
+        <div class="form-group">
+          <label><i class="fas fa-tags"></i> Tags</label>
+          <div class="tag-input-container" id="tagInputContainer">
+            <input type="text" class="tag-input" id="airdropTags" placeholder="Ketikan tag lalu enter...">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label><i class="fas fa-palette"></i> Warna Tag</label>
+          <div id="tagColorControls"></div>
+          
+          <div class="color-group-selector">
+            <h4><i class="fas fa-layer-group"></i> Pilih Grup Warna</h4>
+            <div class="color-groups" id="colorGroups"></div>
+          </div>
+          
+          <div class="tag-palette" id="tagColorPalette"></div>
         </div>
         
         <div class="form-group">
@@ -1686,6 +1883,182 @@
       dateTo: null
     };
 
+    // Tag system variables
+    let currentTags = [];
+    let tagColors = {};
+    let colorGroups = {
+      cool: ["#4361ee", "#4895ef", "#4cc9f0"],
+      warm: ["#f72585", "#b5179e", "#7209b7"],
+      earth: ["#3a5a40", "#588157", "#a3b18a"]
+    };
+
+    // ==================== TAG SYSTEM FUNCTIONS ====================
+    
+    function initTagSystem() {
+      initTagInput();
+      renderTagColorPalette();
+      renderColorGroups();
+      loadColorGroups();
+    }
+
+    function initTagInput() {
+      const tagInput = document.getElementById('airdropTags');
+      
+      tagInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ',') {
+          e.preventDefault();
+          const tag = this.value.trim();
+          if (tag && !currentTags.includes(tag)) {
+            currentTags.push(tag);
+            updateTagColor(tag, getDefaultTagColor(tag));
+            renderTagInput();
+            renderTagColorControls();
+          }
+          this.value = '';
+        }
+      });
+    }
+
+    function renderTagInput() {
+      const container = document.getElementById('tagInputContainer');
+      const tagInput = document.getElementById('airdropTags');
+      container.innerHTML = '';
+      
+      currentTags.forEach(tag => {
+        const tagElement = document.createElement('span');
+        tagElement.className = 'tag';
+        tagElement.style.background = getTagColor(tag);
+        tagElement.innerHTML = `${tag}<span class="tag-remove" onclick="removeTag('${tag}')">×</span>`;
+        container.appendChild(tagElement);
+      });
+      
+      container.appendChild(tagInput);
+    }
+
+    function removeTag(tag) {
+      currentTags = currentTags.filter(t => t !== tag);
+      delete tagColors[tag];
+      renderTagInput();
+      renderTagColorControls();
+    }
+
+    function getDefaultTagColor(tag) {
+      const colors = getComputedStyle(document.documentElement)
+        .getPropertyValue('--tag-preset-colors')
+        .split(',')
+        .map(c => c.trim());
+      
+      const hash = Array.from(tag).reduce((acc, char) => char.charCodeAt(0) + acc, 0);
+      return colors[hash % colors.length];
+    }
+
+    function getTagColor(tag) {
+      return tagColors[tag] || getDefaultTagColor(tag);
+    }
+
+    function updateTagColor(tag, color) {
+      tagColors[tag] = color;
+      renderTagInput();
+    }
+
+    function renderTagColorControls() {
+      const container = document.getElementById('tagColorControls');
+      container.innerHTML = '';
+      
+      currentTags.forEach(tag => {
+        const color = tagColors[tag] || getDefaultTagColor(tag);
+        
+        container.innerHTML += `
+          <div class="tag-color-control" data-tag="${tag}">
+            <span class="tag-preview" 
+                  style="background:${color}"
+                  onclick="setActiveTagControl(this.parentElement)">
+              ${tag}
+            </span>
+            <input type="color" value="${color}" 
+                   onchange="updateTagColor('${tag}', this.value)">
+          </div>
+        `;
+      });
+    }
+
+    function setActiveTagControl(element) {
+      document.querySelectorAll('.tag-color-control').forEach(el => 
+        el.classList.remove('active')
+      );
+      element.classList.add('active');
+    }
+
+    function renderTagColorPalette() {
+      const palette = document.getElementById('tagColorPalette');
+      const colors = getComputedStyle(document.documentElement)
+        .getPropertyValue('--tag-preset-colors')
+        .split(',')
+        .map(c => c.trim());
+      
+      palette.innerHTML = colors.map(color => `
+        <div class="tag-preset-color" 
+             style="background:${color}"
+             onclick="applyPresetColor('${color}')"
+             title="${color}"></div>
+      `).join('');
+    }
+
+    function applyPresetColor(color) {
+      const activeControl = document.querySelector('.tag-color-control.active');
+      if (activeControl) {
+        const tag = activeControl.dataset.tag;
+        updateTagColor(tag, color);
+      }
+    }
+
+    async function loadColorGroups() {
+      const savedGroups = await loadFromFirebase('tagColorGroups');
+      if (savedGroups) {
+        colorGroups = savedGroups;
+      } else {
+        await saveToFirebase('tagColorGroups', colorGroups);
+      }
+      renderColorGroups();
+    }
+
+    function renderColorGroups() {
+      const container = document.getElementById('colorGroups');
+      container.innerHTML = '';
+      
+      Object.entries(colorGroups).forEach(([name, colors]) => {
+        container.innerHTML += `
+          <div class="color-group" onclick="loadColorGroup('${name}')">
+            ${colors.map(c => `<div style="background:${c}"></div>`).join('')}
+            <span>${name}</span>
+          </div>
+        `;
+      });
+    }
+
+    function loadColorGroup(groupName) {
+      const colors = colorGroups[groupName];
+      document.documentElement.style.setProperty(
+        '--tag-preset-colors', 
+        colors.join(',')
+      );
+      renderTagColorPalette();
+    }
+
+    function getAirdropTagsData() {
+      return {
+        tags: [...currentTags],
+        tagColors: {...tagColors}
+      };
+    }
+
+    function resetTagForm() {
+      currentTags = [];
+      tagColors = {};
+      renderTagInput();
+      renderTagColorControls();
+    }
+
     // ==================== TELEGRAM FUNCTIONS ====================
     
     async function sendTelegramNotification(message) {
@@ -1696,6 +2069,18 @@
         if (!config || !config.botToken || !config.chatId) {
           console.error('Telegram bot configuration is incomplete');
           return false;
+        }
+        
+        // Check if this notification was already sent recently
+        const lastNotification = localStorage.getItem('lastTelegramNotification');
+        const currentTime = new Date().getTime();
+        
+        if (lastNotification) {
+          const { content, timestamp } = JSON.parse(lastNotification);
+          // Don't send the same notification within 5 minutes
+          if (content === message && (currentTime - timestamp) < 300000) {
+            return false;
+          }
         }
         
         const url = `https://api.telegram.org/bot${config.botToken}/sendMessage`;
@@ -1716,6 +2101,12 @@
           console.error('Failed to send Telegram notification:', errorData);
           return false;
         }
+        
+        // Store the last notification
+        localStorage.setItem('lastTelegramNotification', JSON.stringify({
+          content: message,
+          timestamp: currentTime
+        }));
         
         console.log('Telegram notification sent successfully');
         return true;
@@ -1780,6 +2171,9 @@
       // Initialize calendar
       renderCalendar();
       
+      // Initialize tag system
+      initTagSystem();
+      
       // Load airdrops from Firebase
       await loadAirdrops();
       
@@ -1800,14 +2194,16 @@
       await loadTimers();
       await loadSpotlights();
 
-      // Check for due check-ins and timers
+      // Check for due check-ins, timers, and deadlines
       checkForDueCheckins();
       checkForDueTimers();
+      checkDeadlineNotifications();
 
       // Set up interval checks (every minute)
       setInterval(() => {
         checkForDueCheckins();
         checkForDueTimers();
+        checkDeadlineNotifications();
       }, 60000);
     });
 
@@ -2121,7 +2517,7 @@
     }
 
     // Render the calendar view with highlighted days that have airdrops
-    function renderCalendar() {
+    async function renderCalendar() {
       const calendarDays = document.getElementById('calendarDays');
       calendarDays.innerHTML = '';
       
@@ -2151,6 +2547,9 @@
       const isCurrentMonth = today.getFullYear() === currentDate.getFullYear() && 
                            today.getMonth() === currentDate.getMonth();
       
+      // Get all airdrops for the current month
+      const allAirdrops = await loadFromFirebase('airdrops');
+      
       // Add cells for each day of the month
       for (let day = 1; day <= totalDays; day++) {
         const dayElement = document.createElement('div');
@@ -2162,8 +2561,9 @@
         const dateStr = `${currentDate.getFullYear()}-${(currentDate.getMonth()+1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
         
         // Check if this date has airdrops
-        const airdrops = getAirdropsByDate(dateStr);
-        const hasAirdrops = airdrops.length > 0;
+        const airdrops = allAirdrops.filter(a => a.date === dateStr);
+        const airdropCount = airdrops.length;
+        const hasAirdrops = airdropCount > 0;
         
         // Set class based on whether it has airdrops and if it's today
         let dayClass = 'calendar-day';
@@ -2174,6 +2574,16 @@
         dayElement.innerHTML = `<div class="day-number ${isToday ? 'today' : ''}">${day}</div>`;
         
         if (hasAirdrops) {
+          // Add count badge
+          const countBadge = document.createElement('div');
+          countBadge.className = 'airdrop-count';
+          countBadge.textContent = airdropCount;
+          dayElement.appendChild(countBadge);
+          
+          // Add tooltip attributes
+          dayElement.setAttribute('data-airdrop-count', airdropCount);
+          dayElement.setAttribute('data-tooltip', `${airdropCount} airdrop pada ${day} ${monthNames[currentDate.getMonth()]}`);
+          
           // Count by progress status
           const notStartedCount = airdrops.filter(a => a.progress === 'not-started').length;
           const inProgressCount = airdrops.filter(a => a.progress === 'in-progress').length;
@@ -2215,6 +2625,8 @@
       const name = document.getElementById('airdropName').value;
       const category = document.getElementById('airdropCategory').value;
       const date = document.getElementById('airdropDate').value;
+      const deadlineDate = document.getElementById('airdropDeadlineDate').value;
+      const deadlineTime = document.getElementById('airdropDeadlineTime').value;
       const status = document.getElementById('airdropStatus').value;
       const progress = document.getElementById('airdropProgress').value;
       const funding = document.getElementById('airdropFunding').value;
@@ -2224,6 +2636,9 @@
       // Get selected wallets
       const walletCheckboxes = document.querySelectorAll('.wallet-option input[name="wallet"]:checked');
       const wallets = Array.from(walletCheckboxes).map(cb => cb.value);
+      
+      // Get tags data
+      const { tags, tagColors } = getAirdropTagsData();
       
       // Validate required fields
       if (!name || !date || !status || !progress) {
@@ -2248,8 +2663,12 @@
         funding: funding ? parseInt(funding) : null,
         link,
         notes,
+        tags,
+        tagColors,
         lastUpdated: new Date().toISOString(),
-        spotlight: false
+        spotlight: false,
+        deadline: deadlineDate && deadlineTime ? `${deadlineDate}T${deadlineTime}` : null,
+        notificationsSent: []
       };
 
       // Save to Firebase
@@ -2260,6 +2679,7 @@
         const index = airdrops.findIndex(a => a.id === editingAirdropId);
         if (index !== -1) {
           airdrop.spotlight = airdrops[index].spotlight; // Preserve spotlight status
+          airdrop.notificationsSent = airdrops[index].notificationsSent || []; // Preserve notifications
           airdrops[index] = airdrop;
         }
       } else {
@@ -2289,6 +2709,8 @@
     function resetForm() {
       document.getElementById('airdropName').value = '';
       document.getElementById('airdropDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('airdropDeadlineDate').value = '';
+      document.getElementById('airdropDeadlineTime').value = '23:59';
       document.getElementById('airdropFunding').value = '';
       document.getElementById('airdropLink').value = '';
       document.getElementById('airdropNotes').value = '';
@@ -2301,6 +2723,9 @@
         checkbox.checked = false;
         checkbox.parentElement.classList.remove('selected');
       });
+      
+      // Reset tags
+      resetTagForm();
       
       editingAirdropId = null;
       document.getElementById('submitAirdropBtn').innerHTML = '<i class="fas fa-plus"></i> Tambah Airdrop';
@@ -2316,6 +2741,16 @@
         document.getElementById('airdropName').value = airdrop.name;
         document.getElementById('airdropCategory').value = airdrop.category;
         document.getElementById('airdropDate').value = airdrop.date;
+        
+        // Set deadline fields if exists
+        if (airdrop.deadline) {
+          const deadline = new Date(airdrop.deadline);
+          const deadlineDate = deadline.toISOString().split('T')[0];
+          const deadlineTime = deadline.toTimeString().substring(0, 5);
+          document.getElementById('airdropDeadlineDate').value = deadlineDate;
+          document.getElementById('airdropDeadlineTime').value = deadlineTime;
+        }
+        
         document.getElementById('airdropStatus').value = airdrop.status;
         document.getElementById('airdropProgress').value = airdrop.progress;
         document.getElementById('airdropFunding').value = airdrop.funding || '';
@@ -2337,6 +2772,12 @@
             checkbox.parentElement.classList.add('selected');
           }
         });
+        
+        // Set tags
+        currentTags = airdrop.tags || [];
+        tagColors = airdrop.tagColors || {};
+        renderTagInput();
+        renderTagColorControls();
         
         // Scroll to form for better UX
         document.querySelector('.form-container').scrollIntoView({ behavior: 'smooth' });
@@ -2365,6 +2806,11 @@
         
         // Update stats
         updateStats();
+
+        // Update spotlight if needed
+        if (document.getElementById('spotlight-tab').classList.contains('active')) {
+          loadSpotlights();
+        }
       }
     }
 
@@ -2500,6 +2946,45 @@
           `;
         }
         
+        // Tags display
+        let tagsDisplay = '';
+        if (airdrop.tags && airdrop.tags.length > 0) {
+          tagsDisplay = `
+            <div class="tag-container">
+              ${airdrop.tags.map(tag => `
+                <span class="tag" style="background:${airdrop.tagColors?.[tag] || getDefaultTagColor(tag)}">
+                  ${tag}
+                </span>
+              `).join('')}
+            </div>
+          `;
+        }
+        
+        // Deadline info
+        let deadlineInfo = '';
+        if (airdrop.deadline) {
+          const deadline = new Date(airdrop.deadline);
+          const now = new Date();
+          const timeRemaining = deadline - now;
+          
+          // Add warning class if deadline is approaching
+          let deadlineClass = '';
+          if (timeRemaining > 0) {
+            if (timeRemaining < 24 * 60 * 60 * 1000) { // Less than 1 day
+              deadlineClass = 'deadline-urgent';
+            } else if (timeRemaining < 7 * 24 * 60 * 60 * 1000) { // Less than 1 week
+              deadlineClass = 'deadline-warning';
+            }
+          }
+          
+          deadlineInfo = `
+            <div class="airdrop-meta-item ${deadlineClass}">
+              <strong><i class="fas fa-hourglass-end"></i> Deadline:</strong>
+              <span>${deadline.toLocaleString()}</span>
+            </div>
+          `;
+        }
+        
         // Build the card HTML
         card.innerHTML = `
           <h3>
@@ -2520,9 +3005,12 @@
               <strong><i class="fas fa-calendar-day"></i> Tanggal:</strong>
               <span>${airdrop.date}</span>
             </div>
+            
+            ${deadlineInfo}
           </div>
           
           ${walletTags}
+          ${tagsDisplay}
           
           ${airdrop.notes ? `<p style="margin: 10px 0; font-size: 0.9rem;"><i class="fas fa-note-sticky"></i> ${airdrop.notes}</p>` : ''}
           
@@ -3231,6 +3719,7 @@
       
       if (airdrop) {
         airdrop.spotlight = !airdrop.spotlight;
+        airdrop.lastUpdated = new Date().toISOString();
         await saveToFirebase('airdrops', airdrops);
         
         // Update the UI
@@ -3315,6 +3804,18 @@
           `;
         }
         
+        // Deadline info
+        let deadlineInfo = '';
+        if (airdrop.deadline) {
+          const deadline = new Date(airdrop.deadline);
+          deadlineInfo = `
+            <div class="airdrop-meta-item">
+              <strong><i class="fas fa-hourglass-end"></i> Deadline:</strong>
+              <span>${deadline.toLocaleString()}</span>
+            </div>
+          `;
+        }
+        
         // Build the card HTML
         card.innerHTML = `
           <h3>
@@ -3335,6 +3836,8 @@
               <strong><i class="fas fa-calendar-day"></i> Tanggal:</strong>
               <span>${airdrop.date}</span>
             </div>
+            
+            ${deadlineInfo}
           </div>
           
           ${walletTags}
@@ -3392,15 +3895,119 @@
       loadSpotlights();
     }
 
+    /* ========== DEADLINE NOTIFICATION FUNCTIONS ========== */
+    async function checkDeadlineNotifications() {
+      const airdrops = await loadFromFirebase('airdrops');
+      const now = new Date();
+      
+      airdrops.forEach(async airdrop => {
+        if (!airdrop.deadline) return;
+        
+        const deadline = new Date(airdrop.deadline);
+        const timeRemaining = deadline - now;
+        
+        if (timeRemaining <= 0) return; // Deadline already passed
+        
+        // Calculate time intervals in milliseconds
+        const oneMonth = 30 * 24 * 60 * 60 * 1000;
+        const oneWeek = 7 * 24 * 60 * 60 * 1000;
+        const oneDay = 24 * 60 * 60 * 1000;
+        const twelveHours = 12 * 60 * 60 * 1000;
+        const oneHour = 60 * 60 * 1000;
+        
+        // Determine which notifications should be sent
+        const notificationsToSend = [];
+        
+        if (timeRemaining > oneMonth) {
+          // More than 1 month remaining
+          if (!airdrop.notificationsSent?.includes('1month') && timeRemaining <= oneMonth + oneHour) {
+            notificationsToSend.push({ 
+              type: '1month', 
+              message: `⏳ <b>Deadline Airdrop 1 Bulan Lagi!</b>\n` +
+                       `📌 Project: ${airdrop.name}\n` +
+                       `📅 Deadline: ${deadline.toLocaleString()}\n` +
+                       `⚠️ Sisa waktu: ~1 bulan`
+            });
+          }
+        }
+        
+        if (timeRemaining > oneWeek) {
+          // More than 1 week remaining
+          if (!airdrop.notificationsSent?.includes('1week') && timeRemaining <= oneWeek + oneHour) {
+            notificationsToSend.push({ 
+              type: '1week', 
+              message: `⏳ <b>Deadline Airdrop 1 Minggu Lagi!</b>\n` +
+                       `📌 Project: ${airdrop.name}\n` +
+                       `📅 Deadline: ${deadline.toLocaleString()}\n` +
+                       `⚠️ Sisa waktu: ~1 minggu`
+            });
+          }
+        }
+        
+        if (timeRemaining > oneDay) {
+          // More than 1 day remaining
+          if (!airdrop.notificationsSent?.includes('1day') && timeRemaining <= oneDay + oneHour) {
+            notificationsToSend.push({ 
+              type: '1day', 
+              message: `⏳ <b>Deadline Airdrop 1 Hari Lagi!</b>\n` +
+                       `📌 Project: ${airdrop.name}\n` +
+                       `📅 Deadline: ${deadline.toLocaleString()}\n` +
+                       `⚠️ Sisa waktu: ~1 hari`
+            });
+          }
+        }
+        
+        // Always check for 12 hours and 1 hour
+        if (!airdrop.notificationsSent?.includes('12hours') && timeRemaining <= twelveHours + oneHour) {
+          notificationsToSend.push({ 
+            type: '12hours', 
+            message: `⏳ <b>Deadline Airdrop 12 Jam Lagi!</b>\n` +
+                     `📌 Project: ${airdrop.name}\n` +
+                     `📅 Deadline: ${deadline.toLocaleString()}\n` +
+                     `⚠️ Sisa waktu: ~12 jam`
+          });
+        }
+        
+        if (!airdrop.notificationsSent?.includes('1hour') && timeRemaining <= oneHour + (5 * 60 * 1000)) {
+          notificationsToSend.push({ 
+            type: '1hour', 
+            message: `⏳ <b>Deadline Airdrop 1 Jam Lagi!</b>\n` +
+                     `📌 Project: ${airdrop.name}\n` +
+                     `📅 Deadline: ${deadline.toLocaleString()}\n` +
+                     `⚠️ Sisa waktu: ~1 jam`
+          });
+        }
+        
+        // Send notifications and update the airdrop record
+        if (notificationsToSend.length > 0) {
+          for (const notification of notificationsToSend) {
+            await sendTelegramNotification(notification.message);
+            
+            // Mark notification as sent
+            if (!airdrop.notificationsSent) airdrop.notificationsSent = [];
+            airdrop.notificationsSent.push(notification.type);
+          }
+          
+          // Save the updated airdrop with sent notifications
+          const updatedAirdrops = airdrops.map(a => 
+            a.id === airdrop.id ? airdrop : a
+          );
+          await saveToFirebase('airdrops', updatedAirdrops);
+        }
+      });
+    }
+
     /* ========== NOTIFICATION FUNCTIONS ========== */
     function showNotification(message) {
       // Notifikasi browser
       if ("Notification" in window) {
         if (Notification.permission === "granted") {
-          new Notification(message);
+          new Notification('Airdrop Tracker', { body: message });
         } else if (Notification.permission !== "denied") {
           Notification.requestPermission().then(permission => {
-            if (permission === "granted") new Notification(message);
+            if (permission === "granted") {
+              new Notification('Airdrop Tracker', { body: message });
+            }
           });
         }
       }
