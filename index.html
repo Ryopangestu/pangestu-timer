@@ -2108,6 +2108,16 @@
         return false;
       }
     }
+    
+    async function saveCustomTags(tags) {
+      try {
+        await database.ref('tags').set(tags);
+        return true;
+      } catch (error) {
+        console.error("Error saving tags:", error);
+        return false;
+      }
+    }
 
     // Fungsi untuk membaca data dari Firebase
     async function loadFromFirebase(path) {
@@ -2130,7 +2140,7 @@
         return [];
       }
     }
-    
+
     // Initialize the app when DOM is loaded
     document.addEventListener('DOMContentLoaded', async () => {
       // Initialize theme
